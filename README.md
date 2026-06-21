@@ -1,6 +1,9 @@
 # MediConnect - Full Stack Doctor Appointment Booking Web Application
 
+**Live Demo:** [https://appointment-booking-five-inky.vercel.app](https://appointment-booking-five-inky.vercel.app)
+
 MediConnect is a premium, production-ready full-stack web application that allows patients to find doctors, schedule appointments, and process payments securely.
+
 
 ---
 
