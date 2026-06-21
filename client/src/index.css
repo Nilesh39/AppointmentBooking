@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-light: #3B82F6;
+  --color-primary-dark: #1D4ED8;
+  
+  --color-secondary: #0EA5E9;
+  --color-secondary-light: #38BDF8;
+  --color-secondary-dark: #0284C7;
+  
+  --color-accent: #14B8A6;
+  --color-accent-light: #2DD4BF;
+  --color-accent-dark: #0F766E;
+  
+  --color-background: #F8FAFC;
+  --color-background-dark: #0F172A;
+  
+  --color-card: #FFFFFF;
+  --color-card-dark: #1E293B;
+  
+  --shadow-premium: 0 4px 30px rgba(0, 0, 0, 0.03);
+  --shadow-premium-hover: 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-slate-800 dark:bg-background-dark dark:text-slate-200 transition-colors duration-300 antialiased font-sans;
+  }
+}
+
+/* Native Tailwind Compilation for Glassmorphism */
+.glass-panel {
+  @apply bg-white/80 dark:bg-slate-900/90 border border-slate-200/40 dark:border-slate-800/40 backdrop-blur-md shadow-glass transition-all duration-300;
+}
+
+.glass-card {
+  @apply bg-white/50 dark:bg-slate-900/50 border border-slate-200/20 dark:border-slate-800/20 backdrop-blur-sm transition-all duration-300;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Skeleton Loading Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Micro-interaction scaling states */
+.hover-scale {
+  @apply hover:scale-[1.02] active:scale-[0.98] transition-all duration-300;
+}
+
+.hover-glow {
+  @apply hover:shadow-primary/10 hover:shadow-lg hover:border-primary/30 transition-all duration-300;
+}
