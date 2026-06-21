@@ -75,3 +75,12 @@ After running the database seeder, you can log in with:
 - **Admin**: `admin@mediconnect.com` / `password123`
 - **Doctor**: `doctor1@mediconnect.com` / `password123`
 - **Patient**: `patient1@mediconnect.com` / `password123`
+
+---
+
+## Vercel Deployment
+
+For monorepo client deployment on Vercel:
+1. In the Vercel project settings, set the **Root Directory** to `client`.
+2. Vercel will automatically detect the Vite config and build the React app correctly.
+
