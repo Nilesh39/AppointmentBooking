@@ -272,6 +272,13 @@ export const cancelAppointment = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to cancel this appointment' });
     }
 
+    let refundMessage = '';
+    const wasPaid = appointment.paymentStatus === 'paid';
+    if (wasPaid) {
+      appointment.paymentStatus = 'refunded';
+      refundMessage = ` A refund of $${appointment.amount} has been initiated.`;
+    }
+
     appointment.status = 'cancelled';
     await appointment.save();
 
@@ -282,7 +289,7 @@ export const cancelAppointment = async (req, res) => {
     await Notification.create({
       userId: recipientId,
       title: 'Appointment Cancelled',
-      message: `The appointment scheduled for ${appointment.date} at ${appointment.timeSlot} has been cancelled by ${notifier}.`,
+      message: `The appointment scheduled for ${appointment.date} at ${appointment.timeSlot} has been cancelled by ${notifier}.${refundMessage}`,
       type: 'appointment',
     });
 
@@ -290,11 +297,29 @@ export const cancelAppointment = async (req, res) => {
       req,
       recipientId,
       'Appointment Cancelled',
-      `The appointment scheduled for ${appointment.date} at ${appointment.timeSlot} has been cancelled by ${notifier}.`,
+      `The appointment scheduled for ${appointment.date} at ${appointment.timeSlot} has been cancelled by ${notifier}.${refundMessage}`,
       'appointment'
     );
 
-    res.json({ success: true, message: 'Appointment cancelled successfully', data: appointment });
+    // If a refund was initiated, notify the patient directly as well
+    if (wasPaid) {
+      await Notification.create({
+        userId: appointment.patientId,
+        title: 'Refund Initiated',
+        message: `Your refund of $${appointment.amount} for the cancelled appointment on ${appointment.date} at ${appointment.timeSlot} has been initiated successfully.`,
+        type: 'payment',
+      });
+
+      sendLiveNotification(
+        req,
+        appointment.patientId,
+        'Refund Initiated',
+        `Your refund of $${appointment.amount} for the cancelled appointment on ${appointment.date} has been initiated successfully.`,
+        'payment'
+      );
+    }
+
+    res.json({ success: true, message: `Appointment cancelled successfully.${refundMessage}`, data: appointment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -506,6 +531,18 @@ export const addReview = async (req, res) => {
       rating: parseInt(rating),
       comment,
     });
+
+    // Recalculate average rating & ratings count for the doctor's profile
+    const allDoctorReviews = await Review.find({ doctorId: appointment.doctorId });
+    const ratingsCount = allDoctorReviews.length;
+    const averageRating = ratingsCount > 0 
+      ? allDoctorReviews.reduce((sum, r) => sum + r.rating, 0) / ratingsCount 
+      : 0;
+
+    await DoctorProfile.findOneAndUpdate(
+      { userId: appointment.doctorId },
+      { averageRating: parseFloat(averageRating.toFixed(1)), ratingsCount }
+    );
 
     res.status(201).json({
       success: true,

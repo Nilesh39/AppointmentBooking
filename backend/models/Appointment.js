@@ -44,7 +44,7 @@ const appointmentSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ['unpaid', 'paid'],
+      enum: ['unpaid', 'paid', 'refunded'],
       default: 'unpaid',
     },
     stripeSessionId: {

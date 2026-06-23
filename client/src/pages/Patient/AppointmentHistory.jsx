@@ -53,14 +53,27 @@ export default function AppointmentHistory() {
     }
   }, [socket]);
 
-  const handleCancel = async (appId) => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
+  // Custom Cancel Modal State
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelAppointmentId, setCancelAppointmentId] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const handleCancelClick = (appId) => {
+    setCancelAppointmentId(appId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    setCancelLoading(true);
     try {
-      await API.put(`/appointments/${appId}/cancel`);
-      toast.success('Appointment cancelled');
+      const res = await API.put(`/appointments/${cancelAppointmentId}/cancel`);
+      toast.success(res.data.message || 'Appointment cancelled successfully');
+      setShowCancelModal(false);
       fetchAppointments();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Cancellation failed');
+      toast.error(err.response?.data?.message || 'Failed to cancel appointment');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -219,8 +232,8 @@ export default function AppointmentHistory() {
                       Pay Now
                     </button>
                     <button
-                      onClick={() => handleCancel(app._id)}
-                      className="px-4 py-2 text-xs font-bold border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
+                      onClick={() => handleCancelClick(app._id)}
+                      className="px-4 py-2 text-xs font-bold border border-red-250 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
                     >
                       Cancel
                     </button>
@@ -403,6 +416,40 @@ export default function AppointmentHistory() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-premium space-y-4 border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-955/20 flex items-center justify-center text-rose-500">
+              <AlertCircle size={24} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">Cancel Appointment?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Are you sure you want to cancel this appointment? This will release the time slot and automatically initiate a refund if already paid.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                className="flex-1 px-4 py-2.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 rounded-xl transition-colors"
+              >
+                No, Keep Booking
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancel}
+                disabled={cancelLoading}
+                className="flex-1 px-4 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-md shadow-rose-900/10 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {cancelLoading ? <Loader className="animate-spin" size={12} /> : 'Yes, Cancel Call'}
+              </button>
+            </div>
           </div>
         </div>
       )}
