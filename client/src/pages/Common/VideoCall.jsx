@@ -50,14 +50,17 @@ const createMockStream = () => {
   const videoStream = canvas.captureStream(10); // 10 FPS
   const videoTrack = videoStream.getVideoTracks()[0];
 
-  // Create mock silent audio track using AudioContext oscillator
+  // Create mock silent audio track using AudioContext buffer source
   let audioTrack = null;
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const dest = audioCtx.createMediaStreamDestination();
-    const osc = audioCtx.createOscillator();
-    osc.connect(dest);
-    osc.start();
+    const bufferSource = audioCtx.createBufferSource();
+    const silenceBuffer = audioCtx.createBuffer(1, 22050, 44100); // 0.5s of absolute silence
+    bufferSource.buffer = silenceBuffer;
+    bufferSource.loop = true;
+    bufferSource.connect(dest);
+    bufferSource.start();
     audioTrack = dest.stream.getAudioTracks()[0];
   } catch (e) {
     console.error('AudioContext not supported, silent track fallback failed:', e);
@@ -93,6 +96,7 @@ export default function VideoCall() {
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(err => console.log('Local autoplay block:', err));
     }
   }, [localStream]);
 
@@ -100,6 +104,7 @@ export default function VideoCall() {
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(err => console.log('Remote autoplay block:', err));
     }
   }, [remoteStream]);
 
