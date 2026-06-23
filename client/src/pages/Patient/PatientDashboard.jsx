@@ -122,13 +122,12 @@ export default function PatientDashboard() {
                     <p className="text-[10px] text-slate-400">{app.timeSlot}</p>
                     
                     {app.paymentStatus === 'paid' && app.videoLink && (
-                      <a
-                        href={app.videoLink}
-                        target="_blank"
+                      <Link
+                        to={`/video-call/${app._id}`}
                         className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full"
                       >
                         <Video size={10} /> Live call
-                      </a>
+                      </Link>
                     )}
                   </div>
                 </div>

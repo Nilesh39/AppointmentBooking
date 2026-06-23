@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Calendar, DollarSign, Users, Video, MessageSquare, Award, Clock, Loader2, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useSocketStore } from '../../store/socketStore.js';
@@ -258,13 +258,12 @@ export default function DoctorDashboard() {
                   {app.status === 'accepted' && (
                     <>
                       {app.videoLink && (
-                        <a
-                          href={app.videoLink}
-                          target="_blank"
+                        <Link
+                          to={`/video-call/${app._id}`}
                           className="px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1 shadow-sm transition-colors"
                         >
                           <Video size={14} /> Join
-                        </a>
+                        </Link>
                       )}
                       <button
                         onClick={() => handleChat(app.patientId)}
