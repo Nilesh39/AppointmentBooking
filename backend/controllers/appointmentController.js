@@ -140,9 +140,9 @@ export const checkoutSession = async (req, res) => {
 
       return res.json({ success: true, url: session.url });
     } else {
-      // Mock payment fallback redirection url
-      const mockSuccessUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-success?appointment_id=${appointment._id}&mock=true`;
-      return res.json({ success: true, url: mockSuccessUrl, isMock: true });
+      // Mock payment fallback redirection url pointing to custom frontend checkout page
+      const mockCheckoutUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/patient/checkout/${appointment._id}`;
+      return res.json({ success: true, url: mockCheckoutUrl, isMock: true });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
