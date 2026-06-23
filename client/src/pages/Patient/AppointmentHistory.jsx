@@ -263,7 +263,7 @@ export default function AppointmentHistory() {
                       Reschedule
                     </button>
                     <button
-                      onClick={() => handleCancel(app._id)}
+                      onClick={() => handleCancelClick(app._id)}
                       className="px-3.5 py-2 text-xs font-bold border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
                     >
                       Cancel
