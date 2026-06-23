@@ -89,6 +89,20 @@ export default function VideoCall() {
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
 
+  // Bind local stream to video element once mounted
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  // Bind remote stream to video element once mounted
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
   // STUN servers configuration for NAT traversal
   const rtcConfig = {
     iceServers: [
@@ -109,9 +123,6 @@ export default function VideoCall() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
         setCallStatus('waiting');
       } catch (err) {
         console.warn('Error accessing physical media devices, falling back to mock stream:', err);
@@ -120,9 +131,6 @@ export default function VideoCall() {
         try {
           const mockStream = createMockStream();
           setLocalStream(mockStream);
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = mockStream;
-          }
           setCallStatus('waiting');
         } catch (fallbackErr) {
           console.error('Failed to create mock stream:', fallbackErr);
@@ -172,9 +180,6 @@ export default function VideoCall() {
       pc.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = event.streams[0];
-          }
           setCallStatus('connected');
         }
       };
