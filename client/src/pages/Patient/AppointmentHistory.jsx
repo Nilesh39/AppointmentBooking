@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, DollarSign, Download, Video, MessageSquare, Star, RefreshCw, XCircle, ChevronRight, AlertCircle, Loader } from 'lucide-react';
-import API from '../../services/api.js';
+import API, { BACKEND_URL } from '../../services/api.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import toast from 'react-hot-toast';
 
@@ -262,16 +262,16 @@ export default function AppointmentHistory() {
                   <>
                     {app.invoiceUrl && (
                       <a
-                        href={`http://localhost:5000${app.invoiceUrl}`}
+                        href={`${BACKEND_URL}${app.invoiceUrl}`}
                         target="_blank"
-                        className="px-3.5 py-2 text-xs font-bold border border-slate-250 dark:border-slate-800 text-slate-750 hover:bg-slate-50 rounded-xl flex items-center gap-1.5 transition-colors"
+                        className="px-3.5 py-2 text-xs font-bold border border-slate-250 dark:border-slate-800 text-slate-755 hover:bg-slate-50 rounded-xl flex items-center gap-1.5 transition-colors"
                       >
                         <Download size={12} /> Invoice
                       </a>
                     )}
                     {app.prescription?.pdfUrl ? (
                       <a
-                        href={`http://localhost:5000${app.prescription.pdfUrl}`}
+                        href={`${BACKEND_URL}${app.prescription.pdfUrl}`}
                         target="_blank"
                         className="px-3.5 py-2 text-xs font-bold bg-teal-500 hover:bg-teal-650 text-white rounded-xl flex items-center gap-1.5 shadow-sm transition-colors"
                       >

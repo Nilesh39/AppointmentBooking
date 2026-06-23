@@ -3,6 +3,7 @@ import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.j
 import { useAuthStore } from '../../store/authStore.js';
 import { User, Phone, Calendar, Mail, Loader, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { BACKEND_URL } from '../../services/api.js';
 
 export default function PatientProfile() {
   const { user, profile, updateProfile, loading, checkAuth } = useAuthStore();
@@ -69,7 +70,7 @@ export default function PatientProfile() {
         <div className="flex flex-col items-center gap-2">
           <div className="relative w-28 h-28 rounded-full border border-slate-250 dark:border-slate-800 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-800 shadow-md">
             {previewUrl ? (
-              <img src={previewUrl.startsWith('/') ? `http://localhost:5000${previewUrl}` : previewUrl} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={previewUrl.startsWith('/') ? `${BACKEND_URL}${previewUrl}` : previewUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <User size={48} className="text-slate-400" />
             )}

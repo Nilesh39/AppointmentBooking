@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader, Download, Calendar } from 'lucide-react';
-import API from '../../services/api.js';
+import API, { BACKEND_URL } from '../../services/api.js';
 import toast from 'react-hot-toast';
 
 export default function PaymentSuccess() {
@@ -49,7 +49,7 @@ export default function PaymentSuccess() {
 
   const handleDownloadInvoice = () => {
     if (appointment?.invoiceUrl) {
-      window.open(`http://localhost:5000${appointment.invoiceUrl}`, '_blank');
+      window.open(`${BACKEND_URL}${appointment.invoiceUrl}`, '_blank');
     } else {
       toast.error('Invoice file not available');
     }

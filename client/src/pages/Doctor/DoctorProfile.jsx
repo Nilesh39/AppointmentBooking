@@ -3,6 +3,7 @@ import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.j
 import { useAuthStore } from '../../store/authStore.js';
 import { User, Mail, DollarSign, Award, GraduationCap, MapPin, Loader, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { BACKEND_URL } from '../../services/api.js';
 
 const specializations = [
   'Cardiologist',
@@ -204,7 +205,7 @@ export default function DoctorProfile() {
               {profile.certificates.map((url, i) => (
                 <a
                   key={i}
-                  href={url.startsWith('/') ? `http://localhost:5000${url}` : url}
+                  href={url.startsWith('/') ? `${BACKEND_URL}${url}` : url}
                   target="_blank"
                   className="px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 hover:bg-slate-100"
                 >

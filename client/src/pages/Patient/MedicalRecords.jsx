@@ -3,6 +3,7 @@ import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.j
 import { useAuthStore } from '../../store/authStore.js';
 import { FileText, Upload, Trash2, Download, Loader, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { BACKEND_URL } from '../../services/api.js';
 
 export default function MedicalRecords() {
   const { profile, uploadRecord, deleteRecord } = useAuthStore();
@@ -127,7 +128,7 @@ export default function MedicalRecords() {
 
                 <div className="flex gap-1">
                   <a
-                    href={rec.url.startsWith('/') ? `http://localhost:5000${rec.url}` : rec.url}
+                    href={rec.url.startsWith('/') ? `${BACKEND_URL}${rec.url}` : rec.url}
                     target="_blank"
                     className="p-2 text-slate-500 hover:text-primary dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                   >

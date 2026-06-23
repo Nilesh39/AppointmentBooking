@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { Download, Users, DollarSign, Calendar, AlertCircle, Loader2, Award } from 'lucide-react';
-import API from '../../services/api.js';
+import API, { BACKEND_URL } from '../../services/api.js';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
 
   const handleExportCSV = () => {
     // Navigate directly to the download route which attaches CSV headers
-    window.open('http://localhost:5000/api/admin/reports/export', '_blank');
+    window.open(`${BACKEND_URL}/api/admin/reports/export`, '_blank');
     toast.success('Dispatched CSV transaction download');
   };
 
