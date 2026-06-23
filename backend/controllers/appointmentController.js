@@ -17,6 +17,21 @@ const getDayName = (dateStr) => {
   return days[dateObj.getDay()];
 };
 
+// Helper to send socket notifications in real-time
+const sendLiveNotification = (req, userId, title, message, type) => {
+  if (req.io && req.userSockets) {
+    const socketId = req.userSockets.get(userId.toString());
+    if (socketId) {
+      req.io.to(socketId).emit('new_notification', {
+        title,
+        message,
+        type: type || 'general',
+        createdAt: new Date(),
+      });
+    }
+  }
+};
+
 // @desc    Book an appointment
 // @route   POST /api/appointments/book
 // @access  Private (Patient only)
@@ -162,8 +177,8 @@ export const verifyPayment = async (req, res) => {
     appointment.paymentStatus = 'paid';
     appointment.status = 'accepted'; // Auto-approve on successful payment
     
-    // Generate virtual consult link automatically
-    appointment.videoLink = `https://meet.jit.si/mediconnect-${appointment._id}`;
+    // Generate virtual consult link automatically (custom WebRTC route)
+    appointment.videoLink = `/video-call/${appointment._id}`;
 
     // Get profiles for Invoice PDF
     const patientUser = await User.findById(appointment.patientId);
@@ -183,12 +198,28 @@ export const verifyPayment = async (req, res) => {
       type: 'payment',
     });
 
+    sendLiveNotification(
+      req,
+      appointment.patientId,
+      'Appointment Booked & Confirmed',
+      `Your appointment with Dr. ${doctorUser.name} on ${appointment.date} at ${appointment.timeSlot} is confirmed.`,
+      'payment'
+    );
+
     await Notification.create({
       userId: appointment.doctorId,
       title: 'New Appointment Booked',
       message: `Patient ${patientUser.name} has booked a slot on ${appointment.date} at ${appointment.timeSlot}.`,
       type: 'appointment',
     });
+
+    sendLiveNotification(
+      req,
+      appointment.doctorId,
+      'New Appointment Booked',
+      `Patient ${patientUser.name} has booked a slot on ${appointment.date} at ${appointment.timeSlot}.`,
+      'appointment'
+    );
 
     // Send Booking Confirmation Emails
     const emailHtmlPatient = `
@@ -255,6 +286,14 @@ export const cancelAppointment = async (req, res) => {
       type: 'appointment',
     });
 
+    sendLiveNotification(
+      req,
+      recipientId,
+      'Appointment Cancelled',
+      `The appointment scheduled for ${appointment.date} at ${appointment.timeSlot} has been cancelled by ${notifier}.`,
+      'appointment'
+    );
+
     res.json({ success: true, message: 'Appointment cancelled successfully', data: appointment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -296,6 +335,14 @@ export const requestReschedule = async (req, res) => {
       message: `${req.user.name} has requested to reschedule your appointment to ${newDate} at ${newTimeSlot}.`,
       type: 'appointment',
     });
+
+    sendLiveNotification(
+      req,
+      recipientId,
+      'Reschedule Request Received',
+      `${req.user.name} has requested to reschedule your appointment to ${newDate} at ${newTimeSlot}.`,
+      'appointment'
+    );
 
     res.json({ success: true, message: 'Reschedule request submitted successfully', data: appointment });
   } catch (error) {
@@ -341,6 +388,14 @@ export const acceptReschedule = async (req, res) => {
       message: `Your reschedule request to ${appointment.date} at ${appointment.timeSlot} has been accepted.`,
       type: 'appointment',
     });
+
+    sendLiveNotification(
+      req,
+      recipientId,
+      'Reschedule Request Accepted',
+      `Your reschedule request to ${appointment.date} at ${appointment.timeSlot} has been accepted.`,
+      'appointment'
+    );
 
     res.json({ success: true, message: 'Appointment rescheduled successfully', data: appointment });
   } catch (error) {

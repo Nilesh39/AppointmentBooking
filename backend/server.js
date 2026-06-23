@@ -76,6 +76,31 @@ io.on('connection', (socket) => {
     }
   });
 
+  // WebRTC Video Call Signaling Events
+  socket.on('join_call', (room) => {
+    socket.join(room);
+    console.log(`Socket ${socket.id} joined call room: ${room}`);
+    socket.to(room).emit('user_joined_call', socket.id);
+  });
+
+  socket.on('webrtc_offer', ({ room, offer }) => {
+    socket.to(room).emit('webrtc_offer', offer);
+  });
+
+  socket.on('webrtc_answer', ({ room, answer }) => {
+    socket.to(room).emit('webrtc_answer', answer);
+  });
+
+  socket.on('webrtc_ice_candidate', ({ room, candidate }) => {
+    socket.to(room).emit('webrtc_ice_candidate', candidate);
+  });
+
+  socket.on('leave_call', (room) => {
+    socket.leave(room);
+    console.log(`Socket ${socket.id} left call room: ${room}`);
+    socket.to(room).emit('user_left_call');
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     for (const [userId, socketId] of userSockets.entries()) {

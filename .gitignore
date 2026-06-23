@@ -19,3 +19,11 @@ yarn-error.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# Generated uploads and documents
+backend/public/documents/*
+backend/public/uploads/*
+backend/public/temp/*
+!backend/public/documents/.gitkeep
+!backend/public/uploads/.gitkeep
+!backend/public/temp/.gitkeep

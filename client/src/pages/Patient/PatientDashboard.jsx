@@ -3,29 +3,42 @@ import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.j
 import { useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, FileText, Heart, Video, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
+import { useSocketStore } from '../../store/socketStore.js';
 import API from '../../services/api.js';
 
 export default function PatientDashboard() {
   const { user, profile, checkAuth } = useAuthStore();
+  const { socket } = useSocketStore();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const fetchDashboardData = async () => {
+    try {
+      const res = await API.get('/appointments');
+      setAppointments(res.data.data);
+    } catch (err) {
+      console.error('Failed to load appointments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     checkAuth(); // Refresh profile state
-
-    const fetchDashboardData = async () => {
-      try {
-        const res = await API.get('/appointments');
-        setAppointments(res.data.data);
-      } catch (err) {
-        console.error('Failed to load appointments:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDashboardData();
-  }, []);
+
+    if (socket) {
+      const handleLiveNotification = () => {
+        fetchDashboardData();
+        checkAuth();
+      };
+      socket.on('new_notification', handleLiveNotification);
+      return () => {
+        socket.off('new_notification', handleLiveNotification);
+      };
+    }
+  }, [socket]);
 
   const upcomingAppointments = appointments.filter(
     (app) => app.status === 'accepted' || app.status === 'pending'

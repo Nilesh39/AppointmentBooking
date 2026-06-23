@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function DoctorDashboard() {
   const { user } = useAuthStore();
-  const { setActiveContact } = useSocketStore();
+  const { socket, setActiveContact } = useSocketStore();
   const navigate = useNavigate();
 
   const [analytics, setAnalytics] = useState(null);
@@ -41,7 +41,17 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+
+    if (socket) {
+      const handleLiveNotification = () => {
+        fetchDashboardData();
+      };
+      socket.on('new_notification', handleLiveNotification);
+      return () => {
+        socket.off('new_notification', handleLiveNotification);
+      };
+    }
+  }, [socket]);
 
   const handleAddMedicine = () => {
     if (!medName || !medDose || !medFreq || !medDur) {

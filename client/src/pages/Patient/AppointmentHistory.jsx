@@ -10,7 +10,7 @@ export default function AppointmentHistory() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { setActiveContact } = useSocketStore();
+  const { socket, setActiveContact } = useSocketStore();
 
   // Review Modal State
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -41,7 +41,17 @@ export default function AppointmentHistory() {
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+
+    if (socket) {
+      const handleLiveNotification = () => {
+        fetchAppointments();
+      };
+      socket.on('new_notification', handleLiveNotification);
+      return () => {
+        socket.off('new_notification', handleLiveNotification);
+      };
+    }
+  }, [socket]);
 
   const handleCancel = async (appId) => {
     if (!window.confirm('Are you sure you want to cancel this appointment?')) return;

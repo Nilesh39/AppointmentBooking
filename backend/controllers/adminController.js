@@ -6,6 +6,21 @@ import Review from '../models/Review.js';
 import Notification from '../models/Notification.js';
 import sendEmail from '../utils/sendEmail.js';
 
+// Helper to send socket notifications in real-time
+const sendLiveNotification = (req, userId, title, message, type) => {
+  if (req.io && req.userSockets) {
+    const socketId = req.userSockets.get(userId.toString());
+    if (socketId) {
+      req.io.to(socketId).emit('new_notification', {
+        title,
+        message,
+        type: type || 'general',
+        createdAt: new Date(),
+      });
+    }
+  }
+};
+
 // @desc    Get admin statistics
 // @route   GET /api/admin/analytics
 // @access  Private (Admin only)
@@ -93,6 +108,22 @@ export const approveDoctor = async (req, res) => {
 
     const doctorUser = await User.findById(doctorUserId);
 
+    // Create system notification
+    await Notification.create({
+      userId: doctorUserId,
+      title: 'Profile Approved',
+      message: 'Congratulations! Your professional registration has been approved. You can now configure your schedule.',
+      type: 'general',
+    });
+
+    sendLiveNotification(
+      req,
+      doctorUserId,
+      'Profile Approved',
+      'Congratulations! Your professional registration has been approved. You can now configure your schedule.',
+      'general'
+    );
+
     // Send Approval Email
     const htmlMessage = `
       <h1>Application Approved!</h1>
@@ -138,6 +169,22 @@ export const rejectDoctor = async (req, res) => {
 
     const doctorUser = await User.findById(doctorUserId);
 
+    // Create system notification
+    await Notification.create({
+      userId: doctorUserId,
+      title: 'Application Rejected',
+      message: 'Your registration application was rejected. Please check your email for details.',
+      type: 'general',
+    });
+
+    sendLiveNotification(
+      req,
+      doctorUserId,
+      'Application Rejected',
+      'Your registration application was rejected. Please check your email for details.',
+      'general'
+    );
+
     // Send Rejection Email
     const htmlMessage = `
       <h1>Application Update</h1>
@@ -181,6 +228,22 @@ export const suspendDoctor = async (req, res) => {
     }
 
     const doctorUser = await User.findById(doctorUserId);
+
+    // Create system notification
+    await Notification.create({
+      userId: doctorUserId,
+      title: 'Profile Suspended',
+      message: 'Your professional account has been suspended by the administrator. Contact support for assistance.',
+      type: 'general',
+    });
+
+    sendLiveNotification(
+      req,
+      doctorUserId,
+      'Profile Suspended',
+      'Your professional account has been suspended by the administrator. Contact support for assistance.',
+      'general'
+    );
 
     // Send Rejection Email
     const htmlMessage = `
@@ -333,6 +396,11 @@ export const sendSystemNotification = async (req, res) => {
     }));
 
     await Notification.insertMany(notifications);
+
+    // Send real-time socket notifications to active users
+    users.forEach(user => {
+      sendLiveNotification(req, user._id, title, message, 'general');
+    });
 
     res.json({ success: true, message: `System notification sent to ${users.length} users.` });
   } catch (error) {

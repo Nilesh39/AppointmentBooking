@@ -7,6 +7,21 @@ import sendEmail from '../utils/sendEmail.js';
 import { generatePrescriptionPDF } from '../utils/pdfGenerator.js';
 import { uploadFile } from '../utils/uploader.js';
 
+// Helper to send socket notifications in real-time
+const sendLiveNotification = (req, userId, title, message, type) => {
+  if (req.io && req.userSockets) {
+    const socketId = req.userSockets.get(userId.toString());
+    if (socketId) {
+      req.io.to(socketId).emit('new_notification', {
+        title,
+        message,
+        type: type || 'general',
+        createdAt: new Date(),
+      });
+    }
+  }
+};
+
 // @desc    Get doctor profile
 // @route   GET /api/doctor/profile
 // @access  Private (Doctor only)
@@ -201,6 +216,14 @@ export const writePrescription = async (req, res) => {
       message: `Dr. ${doctorUser.name} has uploaded a new prescription for your consultation on ${appointment.date}.`,
       type: 'appointment',
     });
+
+    sendLiveNotification(
+      req,
+      appointment.patientId,
+      'New Prescription Uploaded',
+      `Dr. ${doctorUser.name} has uploaded a new prescription for your consultation on ${appointment.date}.`,
+      'appointment'
+    );
 
     // Send Email to Patient
     const htmlMessage = `
