@@ -6,6 +6,73 @@ import { useSocketStore } from '../../store/socketStore.js';
 import { PageWrapper } from '../../components/Shared/PageWrapper.jsx';
 import toast from 'react-hot-toast';
 
+// Generate a mock media stream (e.g. if camera/microphone is missing, blocked, or locked by another window)
+const createMockStream = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  
+  let angle = 0;
+  const animInterval = setInterval(() => {
+    if (!canvas) {
+      clearInterval(animInterval);
+      return;
+    }
+    // Draw background
+    ctx.fillStyle = '#0f172a'; // slate-900
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw text header
+    ctx.fillStyle = '#14b8a6'; // teal-500
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MediConnect Consult Room', canvas.width / 2, canvas.height / 2 - 30);
+    
+    // Draw descriptive text
+    ctx.font = '15px sans-serif';
+    ctx.fillStyle = '#94a3b8'; // slate-400
+    ctx.fillText('Virtual Video Stream Active', canvas.width / 2, canvas.height / 2 + 10);
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#64748b'; // slate-500
+    ctx.fillText('(Physical camera is busy or unavailable)', canvas.width / 2, canvas.height / 2 + 35);
+    
+    // Draw pulsing green indicator dot
+    ctx.fillStyle = '#10b981'; // emerald-500
+    ctx.beginPath();
+    const pulse = 10 + Math.abs(Math.sin(angle)) * 6;
+    ctx.arc(canvas.width / 2, canvas.height / 2 + 80, pulse, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    angle += 0.08;
+  }, 100);
+
+  const videoStream = canvas.captureStream(10); // 10 FPS
+  const videoTrack = videoStream.getVideoTracks()[0];
+
+  // Create mock silent audio track using AudioContext oscillator
+  let audioTrack = null;
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = audioCtx.createMediaStreamDestination();
+    const osc = audioCtx.createOscillator();
+    osc.connect(dest);
+    osc.start();
+    audioTrack = dest.stream.getAudioTracks()[0];
+  } catch (e) {
+    console.error('AudioContext not supported, silent track fallback failed:', e);
+  }
+
+  const tracks = [];
+  if (videoTrack) tracks.push(videoTrack);
+  if (audioTrack) tracks.push(audioTrack);
+  
+  const mockStream = new MediaStream(tracks);
+  mockStream.animInterval = animInterval;
+
+  return mockStream;
+};
+
 export default function VideoCall() {
   const { appointmentId } = useParams();
   const navigate = useNavigate();
@@ -47,9 +114,20 @@ export default function VideoCall() {
         }
         setCallStatus('waiting');
       } catch (err) {
-        console.error('Error accessing media devices:', err);
-        toast.error('Could not access camera or microphone. Please check permissions.');
-        setCallStatus('disconnected');
+        console.warn('Error accessing physical media devices, falling back to mock stream:', err);
+        toast.error('Webcam/Mic is busy or unavailable. Loading virtual consult card...');
+        
+        try {
+          const mockStream = createMockStream();
+          setLocalStream(mockStream);
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = mockStream;
+          }
+          setCallStatus('waiting');
+        } catch (fallbackErr) {
+          console.error('Failed to create mock stream:', fallbackErr);
+          setCallStatus('disconnected');
+        }
       }
     };
 
@@ -65,6 +143,21 @@ export default function VideoCall() {
     if (!socket || !localStream || !appointmentId) return;
 
     socket.emit('join_call', appointmentId);
+
+    const iceCandidatesQueue = [];
+
+    const processIceQueue = async () => {
+      while (iceCandidatesQueue.length > 0) {
+        const candidate = iceCandidatesQueue.shift();
+        try {
+          if (pcRef.current) {
+            await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        } catch (err) {
+          console.error('Error processing queued ICE candidate:', err);
+        }
+      }
+    };
 
     const setupPeerConnection = () => {
       const pc = new RTCPeerConnection(rtcConfig);
@@ -141,6 +234,7 @@ export default function VideoCall() {
           const answer = await pcRef.current.createAnswer();
           await pcRef.current.setLocalDescription(answer);
           socket.emit('webrtc_answer', { room: appointmentId, answer });
+          await processIceQueue();
         }
       } catch (err) {
         console.error('Error handling offer:', err);
@@ -152,6 +246,7 @@ export default function VideoCall() {
       try {
         if (pcRef.current) {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+          await processIceQueue();
         }
       } catch (err) {
         console.error('Error handling answer:', err);
@@ -160,8 +255,10 @@ export default function VideoCall() {
 
     socket.on('webrtc_ice_candidate', async (candidate) => {
       try {
-        if (pcRef.current) {
+        if (pcRef.current && pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
           await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          iceCandidatesQueue.push(candidate);
         }
       } catch (err) {
         console.error('Error adding ICE candidate:', err);
@@ -189,6 +286,9 @@ export default function VideoCall() {
   const cleanupCall = () => {
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
+      if (localStream.animInterval) {
+        clearInterval(localStream.animInterval);
+      }
     }
     if (pcRef.current) {
       pcRef.current.close();

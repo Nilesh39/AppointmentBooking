@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { io } from 'socket.io-client';
-import API from '../services/api.js';
+import API, { BACKEND_URL } from '../services/api.js';
 import toast from 'react-hot-toast';
 
 export const useSocketStore = create((set, get) => ({
@@ -13,9 +13,7 @@ export const useSocketStore = create((set, get) => ({
   connectSocket: (userId) => {
     if (get().socket) return;
 
-    const socketUrl = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace('/api', '') 
-      : 'http://localhost:5000';
+    const socketUrl = BACKEND_URL;
 
     const socket = io(socketUrl, {
       withCredentials: true,
