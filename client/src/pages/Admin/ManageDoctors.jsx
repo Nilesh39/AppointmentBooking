@@ -121,7 +121,7 @@ export default function ManageDoctors() {
                     </td>
                     <td className="py-2.5 md:py-4 px-0 md:px-4 flex justify-between items-center md:table-cell w-full">
                       <span className="font-bold text-slate-400 dark:text-slate-550 uppercase text-[9px] md:hidden">Actions</span>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         {doc.status === 'pending' && (
                           <>
                             <button

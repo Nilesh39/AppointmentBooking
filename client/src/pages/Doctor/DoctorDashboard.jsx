@@ -267,32 +267,32 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
                   {app.status === 'accepted' && (
                     <>
                       {app.videoLink && (
                         <Link
                           to={`/video-call/${app._id}`}
-                          className="px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1 shadow-sm transition-colors"
+                          className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 shadow-sm transition-colors"
                         >
                           <Video size={14} /> Join
                         </Link>
                       )}
                       <button
                         onClick={() => handleChat(app.patientId)}
-                        className="px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center gap-1 transition-colors"
+                        className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center justify-center gap-1 transition-colors"
                       >
                         <MessageSquare size={14} /> Chat
                       </button>
                       <button
                         onClick={() => handleOpenPrescription(app._id)}
-                        className="px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl shadow-sm transition-colors"
+                        className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl flex items-center justify-center gap-1 shadow-sm transition-colors"
                       >
                         Prescribe
                       </button>
                       <button
                         onClick={() => handleCancelClick(app._id)}
-                        className="px-3.5 py-2 text-xs font-bold border border-red-250 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
+                        className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-3.5 py-2 text-xs font-bold border border-red-250 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl flex items-center justify-center gap-1 transition-colors"
                       >
                         Cancel
                       </button>

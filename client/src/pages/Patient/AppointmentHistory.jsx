@@ -222,18 +222,18 @@ export default function AppointmentHistory() {
               </div>
 
               {/* Actions Box */}
-              <div className="flex flex-wrap gap-2 w-full md:w-auto border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-3 md:pt-0 justify-end">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-3 md:pt-0 justify-start md:justify-end">
                 {app.status === 'pending' && app.paymentStatus === 'unpaid' && (
                   <>
                     <button
                       onClick={() => handlePay(app._id)}
-                      className="px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl shadow-sm transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl shadow-sm transition-colors text-center justify-center flex"
                     >
                       Pay Now
                     </button>
                     <button
                       onClick={() => handleCancelClick(app._id)}
-                      className="px-4 py-2 text-xs font-bold border border-red-250 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-4 py-2 text-xs font-bold border border-red-250 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors text-center justify-center flex"
                     >
                       Cancel
                     </button>
@@ -245,26 +245,26 @@ export default function AppointmentHistory() {
                       {app.videoLink && (
                         <Link
                           to={`/video-call/${app._id}`}
-                          className="px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1 shadow-sm transition-colors"
+                          className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 shadow-sm transition-colors"
                         >
                           <Video size={14} /> Join Call
                         </Link>
                       )}
                     <button
                       onClick={() => handleChatDirect(app.doctorId)}
-                      className="px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center gap-1 transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center justify-center gap-1 transition-colors"
                     >
                       <MessageSquare size={14} /> Chat
                     </button>
                     <button
                       onClick={() => handleOpenReschedule(app._id)}
-                      className="px-3.5 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 text-slate-650 hover:bg-slate-50 rounded-xl transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold border border-slate-200 dark:border-slate-800 text-slate-650 hover:bg-slate-50 rounded-xl transition-colors text-center justify-center flex"
                     >
                       Reschedule
                     </button>
                     <button
                       onClick={() => handleCancelClick(app._id)}
-                      className="px-3.5 py-2 text-xs font-bold border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-colors text-center justify-center flex"
                     >
                       Cancel
                     </button>
@@ -277,7 +277,7 @@ export default function AppointmentHistory() {
                       <a
                         href={`${BACKEND_URL}${app.invoiceUrl}`}
                         target="_blank"
-                        className="px-3.5 py-2 text-xs font-bold border border-slate-250 dark:border-slate-800 text-slate-755 hover:bg-slate-50 rounded-xl flex items-center gap-1.5 transition-colors"
+                        className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold border border-slate-250 dark:border-slate-800 text-slate-755 hover:bg-slate-50 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <Download size={12} /> Invoice
                       </a>
@@ -286,16 +286,16 @@ export default function AppointmentHistory() {
                       <a
                         href={`${BACKEND_URL}${app.prescription.pdfUrl}`}
                         target="_blank"
-                        className="px-3.5 py-2 text-xs font-bold bg-teal-500 hover:bg-teal-650 text-white rounded-xl flex items-center gap-1.5 shadow-sm transition-colors"
+                        className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-teal-500 hover:bg-teal-655 text-white rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                       >
                         <Download size={12} /> Prescription
                       </a>
                     ) : (
-                      <span className="text-[10px] text-slate-400 py-2">No RX PDF</span>
+                      <span className="text-[10px] text-slate-400 py-2 flex-1 min-w-[calc(50%-4px)] md:flex-none text-center">No RX PDF</span>
                     )}
                     <button
                       onClick={() => handleOpenReview(app._id)}
-                      className="px-3.5 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl flex items-center gap-1 transition-colors"
+                      className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-primary hover:bg-primary-dark text-white rounded-xl flex items-center justify-center gap-1 transition-colors"
                     >
                       <Star size={14} /> Rate Doctor
                     </button>
