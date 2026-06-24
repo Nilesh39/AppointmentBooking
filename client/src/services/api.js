@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 export const BACKEND_URL = import.meta.env.VITE_API_URL 
   ? import.meta.env.VITE_API_URL.replace('/api', '') 
-  : 'http://localhost:5000';
+  : `${window.location.protocol}//${window.location.hostname}:5000`;
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
