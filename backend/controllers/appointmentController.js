@@ -14,7 +14,7 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 const getDayName = (dateStr) => {
   const dateObj = new Date(dateStr);
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dateObj.getDay()];
+  return days[dateObj.getUTCDay()];
 };
 
 // Helper to send socket notifications in real-time

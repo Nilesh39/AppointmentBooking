@@ -96,9 +96,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('leave_call', (room) => {
-    socket.leave(room);
-    console.log(`Socket ${socket.id} left call room: ${room}`);
+    console.log(`Socket ${socket.id} leaving call room: ${room}`);
     socket.to(room).emit('user_left_call');
+    socket.leave(room);
+  });
+
+  // Handle sudden disconnection - notify any active video call rooms before socket leaves
+  socket.on('disconnecting', () => {
+    console.log(`Socket disconnecting (pre-cleanup): ${socket.id}`);
+    for (const room of socket.rooms) {
+      if (room !== socket.id) {
+        socket.to(room).emit('user_left_call');
+      }
+    }
   });
 
   // Handle disconnection
