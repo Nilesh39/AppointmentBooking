@@ -302,6 +302,8 @@ export default function Checkout() {
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">Card Number</label>
                     <input
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={cardNumber}
                       onChange={handleCardNumberChange}
                       placeholder="4242 4242 4242 4242"
@@ -315,6 +317,7 @@ export default function Checkout() {
                       <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">Expiry Date</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={cardExpiry}
                         onChange={handleExpiryChange}
                         placeholder="MM/YY"
@@ -326,6 +329,8 @@ export default function Checkout() {
                       <label className="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase tracking-wider">CVV Code</label>
                       <input
                         type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={cardCvv}
                         onChange={handleCvvChange}
                         placeholder="123"
