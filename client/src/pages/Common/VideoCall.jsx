@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Video, VideoOff, Mic, MicOff, PhoneOff, Loader2, User, RefreshCw } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Loader2, User, RefreshCw, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import { PageWrapper } from '../../components/Shared/PageWrapper.jsx';
@@ -88,10 +88,13 @@ export default function VideoCall() {
   const [isCamOff, setIsCamOff] = useState(false);
   const [callStatus, setCallStatus] = useState('initializing'); // initializing, waiting, connecting, connected, disconnected
   const [isFrontCamera, setIsFrontCamera] = useState(true);
+  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
+  const [iceState, setIceState] = useState('new'); // Track ICE connection state for debugging
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
+  const remoteStreamRef = useRef(null); // Keep ref to accumulate tracks into single stream
 
   // Bind local stream to video element once mounted
   useEffect(() => {
@@ -105,17 +108,66 @@ export default function VideoCall() {
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(err => console.log('Remote autoplay block:', err));
+      remoteVideoRef.current.play()
+        .then(() => {
+          setShowPlayOverlay(false);
+        })
+        .catch(err => {
+          console.warn('Remote video play blocked (autoplay restriction):', err);
+          setShowPlayOverlay(true);
+        });
     }
   }, [remoteStream]);
 
-  // STUN servers configuration for NAT traversal
+  // Manual play handler for autoplay-blocked browsers (iOS Safari, etc.)
+  const handleStartAudioManual = useCallback(() => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.play()
+        .then(() => {
+          setShowPlayOverlay(false);
+          toast.success('Audio & Video stream connected!');
+        })
+        .catch(err => {
+          console.error('Manual audio play click failed:', err);
+          toast.error('Could not start stream. Please reload the page.');
+        });
+    }
+  }, []);
+
+  // Full page reload for stuck/frozen states
+  const handleReloadCall = useCallback(() => {
+    cleanupCall();
+    window.location.reload();
+  }, []);
+
+  // STUN + TURN servers configuration for NAT traversal
+  // TURN servers are critical for connections behind symmetric NAT (mobile networks, corporate firewalls)
   const rtcConfig = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      // Free TURN relay servers for NAT traversal when STUN fails
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
     ],
+    iceCandidatePoolSize: 10,
   };
 
   useEffect(() => {
@@ -134,18 +186,29 @@ export default function VideoCall() {
         let stream;
         try {
           // Attempt to get both video and audio
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+            }, 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }
+          });
         } catch (mediaErr) {
           console.warn('Failed to acquire both audio and video, trying video-only first:', mediaErr);
           try {
             // Attempt to get video only
             stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            toast.warn('Microphone is unavailable or blocked. Video call started without audio.');
+            toast('Microphone is unavailable. Video call started without audio.', { icon: '⚠️' });
           } catch (videoErr) {
             try {
               // Attempt to get audio only
               stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-              toast.warn('Camera is unavailable or blocked. Video call started with audio only.');
+              toast('Camera is unavailable. Call started with audio only.', { icon: '⚠️' });
             } catch (audioErr) {
               // Both failed, throw final error
               throw new Error('Unable to access any camera or microphone hardware. Permissions might be denied.');
@@ -160,7 +223,7 @@ export default function VideoCall() {
         
         // Show context-specific error toast
         if (!window.isSecureContext) {
-          toast.error('Security Block: WebRTC requires a secure context (HTTPS) on mobile. Loading virtual consult card...', { duration: 6000 });
+          toast.error('Security Block: WebRTC requires HTTPS on mobile. Loading virtual consult card...', { duration: 6000 });
         } else {
           toast.error(`${err.message || 'Camera/Mic blocked.'} Loading virtual consult card...`, { duration: 6000 });
         }
@@ -205,6 +268,12 @@ export default function VideoCall() {
     };
 
     const setupPeerConnection = () => {
+      // Close any existing peer connection first
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
@@ -213,10 +282,23 @@ export default function VideoCall() {
         pc.addTrack(track, localStream);
       });
 
-      // Handle remote stream tracks
+      // Handle remote stream tracks - accumulate into single MediaStream
+      // This handles cases where audio and video tracks arrive in separate ontrack events
       pc.ontrack = (event) => {
+        console.log('[WebRTC] ontrack fired, track kind:', event.track.kind);
+        
         if (event.streams && event.streams[0]) {
+          // Use the stream provided by the event
+          remoteStreamRef.current = event.streams[0];
           setRemoteStream(event.streams[0]);
+          setCallStatus('connected');
+        } else {
+          // Fallback: manually accumulate tracks into a stream
+          if (!remoteStreamRef.current) {
+            remoteStreamRef.current = new MediaStream();
+          }
+          remoteStreamRef.current.addTrack(event.track);
+          setRemoteStream(remoteStreamRef.current);
           setCallStatus('connected');
         }
       };
@@ -224,6 +306,7 @@ export default function VideoCall() {
       // Handle ice candidates generated locally
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('[WebRTC] Sending ICE candidate, type:', event.candidate.type);
           socket.emit('webrtc_ice_candidate', {
             room: appointmentId,
             candidate: event.candidate,
@@ -231,15 +314,36 @@ export default function VideoCall() {
         }
       };
 
+      // Monitor ICE connection state (more granular than connectionState)
+      pc.oniceconnectionstatechange = () => {
+        const state = pc.iceConnectionState;
+        console.log('[WebRTC] ICE connection state:', state);
+        setIceState(state);
+
+        if (state === 'connected' || state === 'completed') {
+          setCallStatus('connected');
+        } else if (state === 'failed') {
+          console.warn('[WebRTC] ICE connection failed — likely NAT traversal issue');
+          toast.error('Connection failed. Tap "Reload" to retry.', { duration: 5000 });
+          setCallStatus('disconnected');
+        } else if (state === 'disconnected') {
+          // Temporary disconnection — may recover automatically
+          toast('Connection interrupted. Attempting to reconnect...', { icon: '⏳' });
+        }
+      };
+
       pc.onconnectionstatechange = () => {
+        console.log('[WebRTC] Connection state:', pc.connectionState);
         switch (pc.connectionState) {
           case 'connected':
             setCallStatus('connected');
             break;
           case 'disconnected':
+            toast('Peer connection interrupted...', { icon: '⏳' });
+            break;
           case 'failed':
             setCallStatus('disconnected');
-            toast.error('Connection lost. Trying to reconnect...');
+            toast.error('Connection failed. Please reload to retry.');
             break;
           case 'closed':
             setCallStatus('disconnected');
@@ -248,47 +352,68 @@ export default function VideoCall() {
             break;
         }
       };
+
+      // Log ICE gathering state for debugging
+      pc.onicegatheringstatechange = () => {
+        console.log('[WebRTC] ICE gathering state:', pc.iceGatheringState);
+      };
     };
 
     setupPeerConnection();
 
     // Socket Event Listeners for signaling
     socket.on('user_joined_call', async (socketId) => {
-      console.log('Opponent joined call:', socketId);
+      console.log('[WebRTC] Peer joined call:', socketId);
       setCallStatus('connecting');
       try {
         if (pcRef.current) {
-          const offer = await pcRef.current.createOffer();
+          const offer = await pcRef.current.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          });
           await pcRef.current.setLocalDescription(offer);
           socket.emit('webrtc_offer', { room: appointmentId, offer });
+          console.log('[WebRTC] Offer sent');
         }
       } catch (err) {
         console.error('Error creating offer:', err);
+        toast.error('Failed to create call offer. Please reload.');
       }
     });
 
     socket.on('webrtc_offer', async (offer) => {
-      console.log('Received WebRTC offer');
+      console.log('[WebRTC] Received offer');
       setCallStatus('connecting');
       try {
         if (pcRef.current) {
+          // If we already have a remote description, recreate the PC
+          if (pcRef.current.signalingState !== 'stable') {
+            console.warn('[WebRTC] Received offer in non-stable state:', pcRef.current.signalingState);
+          }
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
           const answer = await pcRef.current.createAnswer();
           await pcRef.current.setLocalDescription(answer);
           socket.emit('webrtc_answer', { room: appointmentId, answer });
+          console.log('[WebRTC] Answer sent');
           await processIceQueue();
         }
       } catch (err) {
         console.error('Error handling offer:', err);
+        toast.error('Failed to process call offer. Please reload.');
       }
     });
 
     socket.on('webrtc_answer', async (answer) => {
-      console.log('Received WebRTC answer');
+      console.log('[WebRTC] Received answer');
       try {
         if (pcRef.current) {
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-          await processIceQueue();
+          if (pcRef.current.signalingState === 'have-local-offer') {
+            await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+            await processIceQueue();
+            console.log('[WebRTC] Answer processed successfully');
+          } else {
+            console.warn('[WebRTC] Received answer in unexpected state:', pcRef.current.signalingState);
+          }
         }
       } catch (err) {
         console.error('Error handling answer:', err);
@@ -303,7 +428,8 @@ export default function VideoCall() {
           iceCandidatesQueue.push(candidate);
         }
       } catch (err) {
-        console.error('Error adding ICE candidate:', err);
+        // Non-fatal: some ICE candidates may arrive after connection is established
+        console.warn('Error adding ICE candidate (non-fatal):', err.message);
       }
     });
 
@@ -311,6 +437,7 @@ export default function VideoCall() {
       toast.error('The other user has left the call.');
       setCallStatus('disconnected');
       setRemoteStream(null);
+      remoteStreamRef.current = null;
     });
 
     return () => {
@@ -336,6 +463,7 @@ export default function VideoCall() {
       pcRef.current.close();
       pcRef.current = null;
     }
+    remoteStreamRef.current = null;
     setLocalStream(null);
     setRemoteStream(null);
   };
@@ -353,6 +481,8 @@ export default function VideoCall() {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsMuted(!audioTrack.enabled);
+      } else {
+        toast.error('No microphone track available');
       }
     }
   };
@@ -363,6 +493,8 @@ export default function VideoCall() {
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsCamOff(!videoTrack.enabled);
+      } else {
+        toast.error('No camera track available');
       }
     }
   };
@@ -457,11 +589,28 @@ export default function VideoCall() {
                 <>
                   <Loader2 className="animate-spin text-teal-400" size={44} />
                   <p className="text-base font-semibold tracking-wide text-teal-200">Waiting for peer to join...</p>
+                  <p className="text-xs text-slate-500">Share the appointment link with the other person</p>
                 </>
               ) : callStatus === 'connecting' ? (
                 <>
                   <Loader2 className="animate-spin text-teal-400" size={44} />
-                  <p className="text-base font-semibold tracking-wide text-teal-200">Securing P2P handshake...</p>
+                  <p className="text-base font-semibold tracking-wide text-teal-200">Establishing connection...</p>
+                  <p className="text-xs text-slate-500">Negotiating secure P2P media channel</p>
+                </>
+              ) : callStatus === 'disconnected' ? (
+                <>
+                  <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-rose-800/40 flex items-center justify-center text-rose-400 shadow-md">
+                    <PhoneOff size={28} />
+                  </div>
+                  <p className="text-base font-semibold text-slate-300 tracking-wide">Call Disconnected</p>
+                  <p className="text-xs text-slate-500">The connection was lost or the other person left</p>
+                  <button
+                    onClick={handleReloadCall}
+                    className="mt-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center gap-2"
+                  >
+                    <RotateCcw size={16} />
+                    Reconnect Call
+                  </button>
                 </>
               ) : (
                 <>
@@ -469,8 +618,34 @@ export default function VideoCall() {
                     <User size={30} />
                   </div>
                   <p className="text-base font-semibold text-slate-350 tracking-wide">Call is not active</p>
+                  <button
+                    onClick={handleReloadCall}
+                    className="mt-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center gap-2"
+                  >
+                    <RotateCcw size={16} />
+                    Retry Connection
+                  </button>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Autoplay Blocked Overlay - Tap to connect audio/video stream */}
+          {showPlayOverlay && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-4 text-center space-y-4">
+              <div className="h-16 w-16 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center animate-bounce">
+                <Mic size={32} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Audio Autoplay Blocked</h4>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">Your browser blocked automatic audio playback. Tap the button below to connect the audio & video stream.</p>
+              </div>
+              <button
+                onClick={handleStartAudioManual}
+                className="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-teal-900/40 transition-all hover:scale-105 active:scale-95"
+              >
+                Connect Audio & Video
+              </button>
             </div>
           )}
         </div>
@@ -512,7 +687,15 @@ export default function VideoCall() {
               <p className="text-[10px] text-slate-400 font-medium">Room: #{appointmentId.substring(appointmentId.length - 6)}</p>
             </div>
           </div>
-          <div className="text-right">
+          <div className="flex items-center gap-2">
+            {/* Reload button in header */}
+            <button
+              onClick={handleReloadCall}
+              className="h-7 w-7 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all border border-slate-700/50"
+              title="Reload Call"
+            >
+              <RotateCcw size={12} />
+            </button>
             <span className="text-[10px] uppercase font-extrabold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md border border-teal-500/20">
               {callStatus === 'waiting' ? 'Waiting' : callStatus === 'connected' ? 'Connected' : callStatus}
             </span>
