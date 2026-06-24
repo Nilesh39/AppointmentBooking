@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocketStore } from '../../store/socketStore.js';
 import { useAuthStore } from '../../store/authStore.js';
-import { Send, User as UserIcon, MessageCircle } from 'lucide-react';
+import { Send, User as UserIcon, MessageCircle, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Chat() {
@@ -47,7 +47,7 @@ export default function Chat() {
     <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-3xl overflow-hidden h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)] flex transition-all duration-300">
       
       {/* Sidebar Contacts List */}
-      <div className="w-1/3 border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/10">
+      <div className={`w-full md:w-1/3 border-r border-slate-200/50 dark:border-slate-800/50 flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/10 ${activeContact ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 text-left">
           <h3 className="font-extrabold text-slate-800 dark:text-white">Conversations</h3>
           <p className="text-[10px] text-slate-400 mt-0.5">Click contact to begin chat</p>
@@ -84,11 +84,17 @@ export default function Chat() {
       </div>
 
       {/* Main Chat Thread Area */}
-      <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900/20">
+      <div className={`flex-1 flex flex-col h-full bg-white dark:bg-slate-900/20 ${activeContact ? 'flex' : 'hidden md:flex'}`}>
         {activeContact ? (
           <>
             {/* Thread Header */}
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 text-left">
+              <button
+                onClick={() => setActiveContact(null)}
+                className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                <ArrowLeft size={18} />
+              </button>
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary/15 to-secondary/15 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300">
                 {selectedContactDetails?.name.charAt(0) || 'U'}
               </div>
