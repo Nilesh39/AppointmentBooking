@@ -127,12 +127,43 @@ export default function VideoCall() {
     // Initialize media stream
     const initMedia = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera and Microphone APIs are not supported in this browser context (non-secure HTTP connection).');
+        }
+        
+        let stream;
+        try {
+          // Attempt to get both video and audio
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } catch (mediaErr) {
+          console.warn('Failed to acquire both audio and video, trying video-only first:', mediaErr);
+          try {
+            // Attempt to get video only
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            toast.warn('Microphone is unavailable or blocked. Video call started without audio.');
+          } catch (videoErr) {
+            try {
+              // Attempt to get audio only
+              stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+              toast.warn('Camera is unavailable or blocked. Video call started with audio only.');
+            } catch (audioErr) {
+              // Both failed, throw final error
+              throw new Error('Unable to access any camera or microphone hardware. Permissions might be denied.');
+            }
+          }
+        }
+        
         setLocalStream(stream);
         setCallStatus('waiting');
       } catch (err) {
         console.warn('Error accessing physical media devices, falling back to mock stream:', err);
-        toast.error('Webcam/Mic is busy or unavailable. Loading virtual consult card...');
+        
+        // Show context-specific error toast
+        if (!window.isSecureContext) {
+          toast.error('Security Block: WebRTC requires a secure context (HTTPS) on mobile. Loading virtual consult card...', { duration: 6000 });
+        } else {
+          toast.error(`${err.message || 'Camera/Mic blocked.'} Loading virtual consult card...`, { duration: 6000 });
+        }
         
         try {
           const mockStream = createMockStream();
