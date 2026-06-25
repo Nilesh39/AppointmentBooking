@@ -62,6 +62,41 @@ const medicineOrderSchema = new mongoose.Schema(
       type: String,
       default: '123 Health Ave, Medical District',
     },
+    estimatedDeliveryDate: {
+      type: Date,
+    },
+    deliveryPartnerName: {
+      type: String,
+      default: '',
+    },
+    deliveryPartnerPhone: {
+      type: String,
+      default: '',
+    },
+    trackingNumber: {
+      type: String,
+      default: '',
+    },
+    trackingUpdates: [
+      {
+        status: {
+          type: String,
+          required: true,
+        },
+        activity: {
+          type: String,
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        location: {
+          type: String,
+          default: '',
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

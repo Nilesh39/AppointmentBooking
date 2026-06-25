@@ -437,22 +437,69 @@ export const getMedicineOrdersAdmin = async (req, res) => {
 export const updateShippingStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { shippingStatus } = req.body;
-
-    if (!['processing', 'shipped', 'out_for_delivery', 'delivered'].includes(shippingStatus)) {
-      return res.status(400).json({ success: false, message: 'Invalid shipping status' });
-    }
+    const { 
+      shippingStatus, 
+      estimatedDeliveryDate, 
+      deliveryPartnerName, 
+      deliveryPartnerPhone, 
+      trackingNumber,
+      activity,
+      location 
+    } = req.body;
 
     const order = await MedicineOrder.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    order.shippingStatus = shippingStatus;
+    if (shippingStatus) {
+      if (!['processing', 'shipped', 'out_for_delivery', 'delivered'].includes(shippingStatus)) {
+        return res.status(400).json({ success: false, message: 'Invalid shipping status' });
+      }
+      order.shippingStatus = shippingStatus;
+    }
+
+    if (estimatedDeliveryDate !== undefined) {
+      order.estimatedDeliveryDate = estimatedDeliveryDate;
+    }
+    if (deliveryPartnerName !== undefined) {
+      order.deliveryPartnerName = deliveryPartnerName;
+    }
+    if (deliveryPartnerPhone !== undefined) {
+      order.deliveryPartnerPhone = deliveryPartnerPhone;
+    }
+    if (trackingNumber !== undefined) {
+      order.trackingNumber = trackingNumber;
+    }
+
+    // Add tracking milestone update
+    if (activity) {
+      order.trackingUpdates.push({
+        status: shippingStatus || order.shippingStatus,
+        activity,
+        location: location || 'Shipping Hub',
+        timestamp: new Date()
+      });
+    } else if (shippingStatus) {
+      const defaults = {
+        processing: 'Medications are being checked and packaged.',
+        shipped: 'Order dispatched from central pharmacy and handed over to courier.',
+        out_for_delivery: 'Package is out for delivery with courier partner.',
+        delivered: 'Medications have been delivered successfully.'
+      };
+      order.trackingUpdates.push({
+        status: shippingStatus,
+        activity: defaults[shippingStatus],
+        location: location || (shippingStatus === 'delivered' ? 'Patient Address' : 'Shipping Hub'),
+        timestamp: new Date()
+      });
+    }
+
     await order.save();
 
     const title = 'Pharmacy Order Update';
-    const message = `Your medicine order status has been updated to: ${shippingStatus.toUpperCase().replace(/_/g, ' ')}.`;
+    const statusText = (shippingStatus || order.shippingStatus).toUpperCase().replace(/_/g, ' ');
+    const message = `Your medicine order status has been updated to: ${statusText}.`;
     
     await Notification.create({
       userId: order.patientId,
@@ -463,7 +510,7 @@ export const updateShippingStatus = async (req, res) => {
 
     sendLiveNotification(req, order.patientId, title, message, 'general');
 
-    res.json({ success: true, message: 'Shipping status updated successfully', data: order });
+    res.json({ success: true, message: 'Shipping status and tracking updated successfully', data: order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

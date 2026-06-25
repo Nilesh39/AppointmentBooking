@@ -407,6 +407,17 @@ export const verifyMedicineOrder = async (req, res) => {
     }
 
     order.paymentStatus = 'paid';
+    
+    // Initialize tracking updates timeline
+    if (!order.trackingUpdates || order.trackingUpdates.length === 0) {
+      order.trackingUpdates = [{
+        status: 'processing',
+        activity: 'Order placed & payment verified. Preparing your medications.',
+        location: 'Partner Pharmacy Central',
+        timestamp: new Date()
+      }];
+    }
+
     await order.save();
 
     res.json({ success: true, message: 'Pharmacy order paid successfully!', data: order });

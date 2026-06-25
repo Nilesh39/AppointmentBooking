@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
-import { Download, Users, DollarSign, Calendar, AlertCircle, Loader2, Award, Package } from 'lucide-react';
+import { Download, Users, DollarSign, Calendar, AlertCircle, Loader2, Award, Package, Truck, X, Edit, Phone, Clock, MapPin, Tag } from 'lucide-react';
 import API, { BACKEND_URL } from '../../services/api.js';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,16 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Tracking Modal States
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
+  const [shippingStatus, setShippingStatus] = useState('');
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
+  const [deliveryPartnerName, setDeliveryPartnerName] = useState('');
+  const [deliveryPartnerPhone, setDeliveryPartnerPhone] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [trackingActivity, setTrackingActivity] = useState('');
+  const [trackingLocation, setTrackingLocation] = useState('');
 
   const fetchStats = async () => {
     setLoading(true);
@@ -37,15 +47,39 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
-  const handleUpdateShipping = async (orderId, newStatus) => {
+  const openTrackingModal = (order) => {
+    setSelectedOrderForTracking(order);
+    setShippingStatus(order.shippingStatus || 'processing');
+    setEstimatedDeliveryDate(order.estimatedDeliveryDate ? order.estimatedDeliveryDate.substring(0, 10) : '');
+    setDeliveryPartnerName(order.deliveryPartnerName || '');
+    setDeliveryPartnerPhone(order.deliveryPartnerPhone || '');
+    setTrackingNumber(order.trackingNumber || '');
+    setTrackingActivity('');
+    setTrackingLocation('');
+  };
+
+  const handleSaveTracking = async (e) => {
+    e.preventDefault();
+    if (!selectedOrderForTracking) return;
+
     try {
-      const res = await API.put(`/admin/orders/${orderId}/shipping`, { shippingStatus: newStatus });
+      const res = await API.put(`/admin/orders/${selectedOrderForTracking._id}/shipping`, {
+        shippingStatus,
+        estimatedDeliveryDate: estimatedDeliveryDate || undefined,
+        deliveryPartnerName,
+        deliveryPartnerPhone,
+        trackingNumber,
+        activity: trackingActivity || undefined,
+        location: trackingLocation || undefined
+      });
+
       if (res.data.success) {
-        toast.success(`Shipping status updated to: ${newStatus.toUpperCase()}`);
+        toast.success('Order tracking updated successfully!');
+        setSelectedOrderForTracking(null);
         fetchOrders();
       }
     } catch (err) {
-      toast.error('Failed to update shipping status');
+      toast.error('Failed to update order tracking details');
     }
   };
 
@@ -166,14 +200,15 @@ export default function AdminDashboard() {
           ) : (
             <table className="w-full text-xs text-slate-550 dark:text-slate-400 border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-850 text-[10px] font-bold text-slate-450 uppercase tracking-wider text-left">
+                <tr className="border-b border-slate-100 dark:border-slate-850 text-[10px] font-bold text-slate-455 uppercase tracking-wider text-left">
                   <th className="py-3 px-2">Order ID</th>
                   <th className="py-3 px-2">Patient</th>
                   <th className="py-3 px-2">Doctor</th>
                   <th className="py-3 px-2">Medications</th>
                   <th className="py-3 px-2">Amount</th>
                   <th className="py-3 px-2">Address</th>
-                  <th className="py-3 px-2 text-right">Shipping Status</th>
+                  <th className="py-3 px-2">Shipping Status</th>
+                  <th className="py-3 px-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
@@ -192,17 +227,28 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-3 px-2 font-bold text-primary dark:text-secondary">${ord.totalAmount.toFixed(2)}</td>
                     <td className="py-3 px-2 truncate max-w-[120px]" title={ord.shippingAddress}>{ord.shippingAddress}</td>
+                    <td className="py-3 px-2">
+                      <div className="flex flex-col">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-wider w-fit ${
+                          ord.shippingStatus === 'delivered' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400' :
+                          ord.shippingStatus === 'out_for_delivery' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400' :
+                          ord.shippingStatus === 'shipped' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-400' :
+                          'bg-amber-100 text-amber-805 dark:bg-amber-950/30 dark:text-amber-400'
+                        }`}>
+                          {ord.shippingStatus.replace(/_/g, ' ')}
+                        </span>
+                        {ord.trackingNumber && (
+                          <span className="text-[9px] text-slate-400 font-mono mt-1"># {ord.trackingNumber}</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-2 text-right">
-                      <select
-                        value={ord.shippingStatus}
-                        onChange={(e) => handleUpdateShipping(ord._id, e.target.value)}
-                        className="px-2 py-1 text-[10px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+                      <button
+                        onClick={() => openTrackingModal(ord)}
+                        className="px-2.5 py-1 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ml-auto cursor-pointer"
                       >
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="out_for_delivery">Out for Delivery</option>
-                        <option value="delivered">Delivered</option>
-                      </select>
+                        <Truck size={12} /> Manage
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -211,6 +257,141 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {selectedOrderForTracking && (
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 text-left">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-850 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Truck className="text-primary animate-pulse" size={18} /> Manage Shipment Tracking
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Order ID: <span className="font-mono">{selectedOrderForTracking._id}</span></p>
+              </div>
+              <button 
+                onClick={() => setSelectedOrderForTracking(null)} 
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveTracking} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Shipping Status select */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Shipping Status</label>
+                  <select
+                    value={shippingStatus}
+                    onChange={(e) => setShippingStatus(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-250"
+                  >
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="out_for_delivery">Out for Delivery</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                </div>
+
+                {/* Estimated Delivery Date */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Estimated Delivery Date</label>
+                  <input
+                    type="date"
+                    value={estimatedDeliveryDate}
+                    onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-255"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Delivery Courier Name */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Truck size={10} /> Delivery Courier</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. DHL Express, Fedex"
+                    value={deliveryPartnerName}
+                    onChange={(e) => setDeliveryPartnerName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
+                  />
+                </div>
+
+                {/* Courier Contact Phone */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Phone size={10} /> Courier Contact</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +1 555-0192"
+                    value={deliveryPartnerPhone}
+                    onChange={(e) => setDeliveryPartnerPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
+                  />
+                </div>
+              </div>
+
+              {/* Tracking Number */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> Tracking Number / Shipment ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. TRK102394021"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors font-mono text-slate-700 dark:text-slate-255"
+                />
+              </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-850 my-2 pt-3 space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Add Shipping Update Milestone (Optional)</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Tracking Update Location */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><MapPin size={10} /> Activity Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Shipping Hub, Local Facility"
+                      value={trackingLocation}
+                      onChange={(e) => setTrackingLocation(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
+                    />
+                  </div>
+
+                  {/* Tracking Update Status Description */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Clock size={10} /> Activity Description</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Handed over to courier partner"
+                      value={trackingActivity}
+                      onChange={(e) => setTrackingActivity(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForTracking(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 transition-all hover:scale-[1.01] cursor-pointer"
+                >
+                  Save Shipment Info
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </PageWrapper>
   );
 }

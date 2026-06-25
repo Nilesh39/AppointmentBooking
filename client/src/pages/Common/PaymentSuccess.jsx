@@ -106,6 +106,20 @@ export default function PaymentSuccess() {
                     <span className="font-extrabold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full uppercase tracking-wider text-[9px]">{order.shippingStatus}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-slate-400">Estimated Delivery:</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      {order.estimatedDeliveryDate 
+                        ? new Date(order.estimatedDeliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                        : 'Pending dispatch'}
+                    </span>
+                  </div>
+                  {order.deliveryPartnerName && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Courier Partner:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{order.deliveryPartnerName}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
                     <span className="text-slate-400">Total Charged:</span>
                     <span className="font-extrabold text-primary dark:text-secondary">${order.totalAmount.toFixed(2)}</span>
                   </div>
