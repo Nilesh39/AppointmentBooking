@@ -55,7 +55,7 @@ const medicineOrderSchema = new mongoose.Schema(
     },
     shippingStatus: {
       type: String,
-      enum: ['processing', 'shipped', 'out_for_delivery', 'delivered'],
+      enum: ['processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'],
       default: 'processing',
     },
     shippingAddress: {
@@ -65,18 +65,48 @@ const medicineOrderSchema = new mongoose.Schema(
     estimatedDeliveryDate: {
       type: Date,
     },
-    deliveryPartnerName: {
-      type: String,
-      default: '',
-    },
-    deliveryPartnerPhone: {
-      type: String,
-      default: '',
+    // Delivery partner full profile
+    deliveryPartner: {
+      name: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      vehicleType: { type: String, default: '' },
+      vehicleNumber: { type: String, default: '' },
+      rating: { type: Number, default: 4.5 },
+      totalDeliveries: { type: Number, default: 0 },
     },
     trackingNumber: {
       type: String,
       default: '',
     },
+    // Origin and destination for journey route
+    originHub: {
+      type: String,
+      default: 'MediConnect Central Pharmacy',
+    },
+    currentLocation: {
+      type: String,
+      default: '',
+    },
+    // Full journey route with all stops
+    journeyRoute: [
+      {
+        stopName: { type: String, required: true },
+        stopType: {
+          type: String,
+          enum: ['origin', 'hub', 'sorting', 'local', 'last_mile', 'destination'],
+          default: 'hub',
+        },
+        estimatedArrival: { type: Date },
+        actualArrival: { type: Date },
+        status: {
+          type: String,
+          enum: ['upcoming', 'current', 'completed'],
+          default: 'upcoming',
+        },
+        distanceFromPrevKm: { type: Number, default: 0 },
+      },
+    ],
+    // Tracking updates timeline
     trackingUpdates: [
       {
         status: {

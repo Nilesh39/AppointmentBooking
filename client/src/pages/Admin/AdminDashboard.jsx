@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
-import { Download, Users, DollarSign, Calendar, AlertCircle, Loader2, Award, Package, Truck, X, Edit, Phone, Clock, MapPin, Tag } from 'lucide-react';
+import { Download, Users, DollarSign, Calendar, AlertCircle, Loader2, Award, Package, Truck, X, Edit, Phone, Clock, MapPin, Tag, Star, Navigation } from 'lucide-react';
 import API, { BACKEND_URL } from '../../services/api.js';
 import toast from 'react-hot-toast';
 
@@ -13,11 +13,17 @@ export default function AdminDashboard() {
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
   const [shippingStatus, setShippingStatus] = useState('');
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
-  const [deliveryPartnerName, setDeliveryPartnerName] = useState('');
-  const [deliveryPartnerPhone, setDeliveryPartnerPhone] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
   const [trackingActivity, setTrackingActivity] = useState('');
   const [trackingLocation, setTrackingLocation] = useState('');
+  const [currentLocation, setCurrentLocation] = useState('');
+  // Delivery Partner Profile
+  const [dpName, setDpName] = useState('');
+  const [dpPhone, setDpPhone] = useState('');
+  const [dpVehicleType, setDpVehicleType] = useState('');
+  const [dpVehicleNumber, setDpVehicleNumber] = useState('');
+  const [dpRating, setDpRating] = useState('4.5');
+  const [dpTotalDeliveries, setDpTotalDeliveries] = useState('0');
 
   const fetchStats = async () => {
     setLoading(true);
@@ -51,9 +57,14 @@ export default function AdminDashboard() {
     setSelectedOrderForTracking(order);
     setShippingStatus(order.shippingStatus || 'processing');
     setEstimatedDeliveryDate(order.estimatedDeliveryDate ? order.estimatedDeliveryDate.substring(0, 10) : '');
-    setDeliveryPartnerName(order.deliveryPartnerName || '');
-    setDeliveryPartnerPhone(order.deliveryPartnerPhone || '');
     setTrackingNumber(order.trackingNumber || '');
+    setCurrentLocation(order.currentLocation || '');
+    setDpName(order.deliveryPartner?.name || '');
+    setDpPhone(order.deliveryPartner?.phone || '');
+    setDpVehicleType(order.deliveryPartner?.vehicleType || '');
+    setDpVehicleNumber(order.deliveryPartner?.vehicleNumber || '');
+    setDpRating(String(order.deliveryPartner?.rating || 4.5));
+    setDpTotalDeliveries(String(order.deliveryPartner?.totalDeliveries || 0));
     setTrackingActivity('');
     setTrackingLocation('');
   };
@@ -66,9 +77,16 @@ export default function AdminDashboard() {
       const res = await API.put(`/admin/orders/${selectedOrderForTracking._id}/shipping`, {
         shippingStatus,
         estimatedDeliveryDate: estimatedDeliveryDate || undefined,
-        deliveryPartnerName,
-        deliveryPartnerPhone,
         trackingNumber,
+        currentLocation: currentLocation || undefined,
+        deliveryPartner: {
+          name: dpName,
+          phone: dpPhone,
+          vehicleType: dpVehicleType,
+          vehicleNumber: dpVehicleNumber,
+          rating: parseFloat(dpRating) || 4.5,
+          totalDeliveries: parseInt(dpTotalDeliveries) || 0,
+        },
         activity: trackingActivity || undefined,
         location: trackingLocation || undefined
       });
@@ -276,9 +294,8 @@ export default function AdminDashboard() {
               </button>
             </div>
             
-            <form onSubmit={handleSaveTracking} className="p-6 space-y-4">
+            <form onSubmit={handleSaveTracking} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Shipping Status select */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Shipping Status</label>
                   <select
@@ -286,107 +303,99 @@ export default function AdminDashboard() {
                     onChange={(e) => setShippingStatus(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-250"
                   >
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="out_for_delivery">Out for Delivery</option>
-                    <option value="delivered">Delivered</option>
+                    <option value="processing">⏳ Processing</option>
+                    <option value="packed">📦 Packed</option>
+                    <option value="shipped">🚀 Shipped</option>
+                    <option value="in_transit">🚛 In Transit</option>
+                    <option value="out_for_delivery">🏍️ Out for Delivery</option>
+                    <option value="delivered">✅ Delivered</option>
                   </select>
                 </div>
-
-                {/* Estimated Delivery Date */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Estimated Delivery Date</label>
-                  <input
-                    type="date"
-                    value={estimatedDeliveryDate}
-                    onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-255"
-                  />
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> Estimated Delivery</label>
+                  <input type="date" value={estimatedDeliveryDate} onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-200" />
+                </div>
+              </div>
+
+              {/* Delivery Partner Profile */}
+              <div className="border border-primary/20 dark:border-primary/10 rounded-2xl p-4 space-y-3 bg-primary/[0.02] dark:bg-primary/[0.03]">
+                <h4 className="text-[10px] font-extrabold text-primary uppercase tracking-wider flex items-center gap-1"><Truck size={11} /> Delivery Partner Profile</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Partner Name</label>
+                    <input type="text" placeholder="e.g. Rajesh Kumar" value={dpName} onChange={(e) => setDpName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Phone size={9} /> Phone</label>
+                    <input type="tel" placeholder="+91 98765 43210" value={dpPhone} onChange={(e) => setDpPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Vehicle Type</label>
+                    <select value={dpVehicleType} onChange={(e) => setDpVehicleType(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors cursor-pointer text-slate-700 dark:text-slate-200">
+                      <option value="">Select vehicle</option>
+                      <option value="Bike">🏍️ Bike</option>
+                      <option value="Scooter">🛵 Scooter</option>
+                      <option value="Van">🚐 Van</option>
+                      <option value="Truck">🚛 Truck</option>
+                      <option value="Car">🚗 Car</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Vehicle Number</label>
+                    <input type="text" placeholder="e.g. MH-12 AB 3456" value={dpVehicleNumber} onChange={(e) => setDpVehicleNumber(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors font-mono text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Star size={9} /> Rating</label>
+                    <input type="number" step="0.1" min="1" max="5" value={dpRating} onChange={(e) => setDpRating(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Total Deliveries</label>
+                    <input type="number" min="0" value={dpTotalDeliveries} onChange={(e) => setDpTotalDeliveries(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Delivery Courier Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Truck size={10} /> Delivery Courier</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. DHL Express, Fedex"
-                    value={deliveryPartnerName}
-                    onChange={(e) => setDeliveryPartnerName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
-                  />
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> Tracking Number</label>
+                  <input type="text" placeholder="TRK102394021" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors font-mono text-slate-700 dark:text-slate-200" />
                 </div>
-
-                {/* Courier Contact Phone */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Phone size={10} /> Courier Contact</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. +1 555-0192"
-                    value={deliveryPartnerPhone}
-                    onChange={(e) => setDeliveryPartnerPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
-                  />
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Navigation size={10} /> Current Location</label>
+                  <input type="text" placeholder="e.g. City Distribution Hub" value={currentLocation} onChange={(e) => setCurrentLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
                 </div>
-              </div>
-
-              {/* Tracking Number */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> Tracking Number / Shipment ID</label>
-                <input
-                  type="text"
-                  placeholder="e.g. TRK102394021"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors font-mono text-slate-700 dark:text-slate-255"
-                />
               </div>
 
               <div className="border-t border-slate-100 dark:border-slate-850 my-2 pt-3 space-y-3">
-                <h4 className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Add Shipping Update Milestone (Optional)</h4>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Tracking Update Location */}
+                <h4 className="text-[10px] font-bold text-slate-450 uppercase tracking-wide">Add Tracking Milestone (Optional)</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><MapPin size={10} /> Activity Location</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Shipping Hub, Local Facility"
-                      value={trackingLocation}
-                      onChange={(e) => setTrackingLocation(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
-                    />
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><MapPin size={9} /> Location</label>
+                    <input type="text" placeholder="Sorting Facility, Local Hub" value={trackingLocation} onChange={(e) => setTrackingLocation(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
                   </div>
-
-                  {/* Tracking Update Status Description */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider flex items-center gap-1"><Clock size={10} /> Activity Description</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Handed over to courier partner"
-                      value={trackingActivity}
-                      onChange={(e) => setTrackingActivity(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-255"
-                    />
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider flex items-center gap-1"><Clock size={9} /> Description</label>
+                    <input type="text" placeholder="Handed to courier partner" value={trackingActivity} onChange={(e) => setTrackingActivity(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none focus:border-primary transition-colors text-slate-700 dark:text-slate-200" />
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-850">
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrderForTracking(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 transition-all hover:scale-[1.01] cursor-pointer"
-                >
-                  Save Shipment Info
-                </button>
+                <button type="button" onClick={() => setSelectedOrderForTracking(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer">Cancel</button>
+                <button type="submit"
+                  className="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 transition-all hover:scale-[1.01] cursor-pointer flex items-center gap-1.5"><Truck size={13} /> Update Shipment</button>
               </div>
             </form>
           </div>

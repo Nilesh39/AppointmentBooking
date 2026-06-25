@@ -431,20 +431,20 @@ export const getMedicineOrdersAdmin = async (req, res) => {
   }
 };
 
-// @desc    Update order shipping status
+// @desc    Update order shipping status with full tracking
 // @route   PUT /api/admin/orders/:orderId/shipping
 // @access  Private (Admin only)
 export const updateShippingStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { 
-      shippingStatus, 
-      estimatedDeliveryDate, 
-      deliveryPartnerName, 
-      deliveryPartnerPhone, 
+    const {
+      shippingStatus,
+      estimatedDeliveryDate,
+      deliveryPartner,
       trackingNumber,
       activity,
-      location 
+      location,
+      currentLocation,
     } = req.body;
 
     const order = await MedicineOrder.findById(orderId);
@@ -452,8 +452,9 @@ export const updateShippingStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    // Update shipping status
     if (shippingStatus) {
-      if (!['processing', 'shipped', 'out_for_delivery', 'delivered'].includes(shippingStatus)) {
+      if (!['processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'].includes(shippingStatus)) {
         return res.status(400).json({ success: false, message: 'Invalid shipping status' });
       }
       order.shippingStatus = shippingStatus;
@@ -462,36 +463,123 @@ export const updateShippingStatus = async (req, res) => {
     if (estimatedDeliveryDate !== undefined) {
       order.estimatedDeliveryDate = estimatedDeliveryDate;
     }
-    if (deliveryPartnerName !== undefined) {
-      order.deliveryPartnerName = deliveryPartnerName;
-    }
-    if (deliveryPartnerPhone !== undefined) {
-      order.deliveryPartnerPhone = deliveryPartnerPhone;
+    if (currentLocation) {
+      order.currentLocation = currentLocation;
     }
     if (trackingNumber !== undefined) {
       order.trackingNumber = trackingNumber;
     }
 
-    // Add tracking milestone update
+    // Update delivery partner profile
+    if (deliveryPartner) {
+      if (deliveryPartner.name !== undefined) order.deliveryPartner.name = deliveryPartner.name;
+      if (deliveryPartner.phone !== undefined) order.deliveryPartner.phone = deliveryPartner.phone;
+      if (deliveryPartner.vehicleType !== undefined) order.deliveryPartner.vehicleType = deliveryPartner.vehicleType;
+      if (deliveryPartner.vehicleNumber !== undefined) order.deliveryPartner.vehicleNumber = deliveryPartner.vehicleNumber;
+      if (deliveryPartner.rating !== undefined) order.deliveryPartner.rating = deliveryPartner.rating;
+      if (deliveryPartner.totalDeliveries !== undefined) order.deliveryPartner.totalDeliveries = deliveryPartner.totalDeliveries;
+    }
+
+    // Auto-generate realistic journey route when status changes to 'shipped'
+    if (shippingStatus === 'shipped' && (!order.journeyRoute || order.journeyRoute.length === 0)) {
+      const now = new Date();
+      const deliveryDate = order.estimatedDeliveryDate || new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const totalMs = deliveryDate.getTime() - now.getTime();
+
+      order.journeyRoute = [
+        {
+          stopName: order.originHub || 'MediConnect Central Pharmacy',
+          stopType: 'origin',
+          estimatedArrival: now,
+          actualArrival: now,
+          status: 'completed',
+          distanceFromPrevKm: 0,
+        },
+        {
+          stopName: 'Regional Sorting Facility',
+          stopType: 'sorting',
+          estimatedArrival: new Date(now.getTime() + totalMs * 0.15),
+          status: 'upcoming',
+          distanceFromPrevKm: 45,
+        },
+        {
+          stopName: 'City Distribution Hub',
+          stopType: 'hub',
+          estimatedArrival: new Date(now.getTime() + totalMs * 0.4),
+          status: 'upcoming',
+          distanceFromPrevKm: 120,
+        },
+        {
+          stopName: 'Local Delivery Station',
+          stopType: 'local',
+          estimatedArrival: new Date(now.getTime() + totalMs * 0.7),
+          status: 'upcoming',
+          distanceFromPrevKm: 25,
+        },
+        {
+          stopName: 'Last Mile — Out for Delivery',
+          stopType: 'last_mile',
+          estimatedArrival: new Date(now.getTime() + totalMs * 0.9),
+          status: 'upcoming',
+          distanceFromPrevKm: 8,
+        },
+        {
+          stopName: order.shippingAddress || 'Patient Address',
+          stopType: 'destination',
+          estimatedArrival: deliveryDate,
+          status: 'upcoming',
+          distanceFromPrevKm: 3,
+        },
+      ];
+    }
+
+    // Auto-advance journey stops based on shipping status
+    if (shippingStatus && order.journeyRoute && order.journeyRoute.length > 0) {
+      const statusToStopIndex = {
+        shipped: 1,
+        in_transit: 2,
+        out_for_delivery: 4,
+        delivered: 5,
+      };
+      const targetIndex = statusToStopIndex[shippingStatus];
+      if (targetIndex !== undefined) {
+        order.journeyRoute.forEach((stop, idx) => {
+          if (idx < targetIndex) {
+            stop.status = 'completed';
+            if (!stop.actualArrival) stop.actualArrival = new Date();
+          } else if (idx === targetIndex) {
+            stop.status = 'current';
+            stop.actualArrival = new Date();
+            order.currentLocation = stop.stopName;
+          } else {
+            stop.status = 'upcoming';
+          }
+        });
+      }
+    }
+
+    // Add tracking milestone
     if (activity) {
       order.trackingUpdates.push({
         status: shippingStatus || order.shippingStatus,
         activity,
-        location: location || 'Shipping Hub',
-        timestamp: new Date()
+        location: location || order.currentLocation || 'Shipping Hub',
+        timestamp: new Date(),
       });
     } else if (shippingStatus) {
       const defaults = {
-        processing: 'Medications are being checked and packaged.',
-        shipped: 'Order dispatched from central pharmacy and handed over to courier.',
-        out_for_delivery: 'Package is out for delivery with courier partner.',
-        delivered: 'Medications have been delivered successfully.'
+        processing: 'Order received. Verifying prescription and preparing medications.',
+        packed: 'All medications have been verified, packed, and sealed for shipment.',
+        shipped: 'Package dispatched from central pharmacy and handed to courier partner.',
+        in_transit: 'Package is in transit through the delivery network.',
+        out_for_delivery: `Courier ${order.deliveryPartner?.name || 'partner'} is on the way to your address.`,
+        delivered: 'Package delivered successfully. Thank you for choosing MediConnect!',
       };
       order.trackingUpdates.push({
         status: shippingStatus,
         activity: defaults[shippingStatus],
-        location: location || (shippingStatus === 'delivered' ? 'Patient Address' : 'Shipping Hub'),
-        timestamp: new Date()
+        location: location || order.currentLocation || (shippingStatus === 'delivered' ? order.shippingAddress : 'Shipping Hub'),
+        timestamp: new Date(),
       });
     }
 
@@ -500,7 +588,7 @@ export const updateShippingStatus = async (req, res) => {
     const title = 'Pharmacy Order Update';
     const statusText = (shippingStatus || order.shippingStatus).toUpperCase().replace(/_/g, ' ');
     const message = `Your medicine order status has been updated to: ${statusText}.`;
-    
+
     await Notification.create({
       userId: order.patientId,
       title,

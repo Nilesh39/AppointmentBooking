@@ -113,10 +113,10 @@ export default function PaymentSuccess() {
                         : 'Pending dispatch'}
                     </span>
                   </div>
-                  {order.deliveryPartnerName && (
+                  {order.deliveryPartner?.name && (
                     <div className="flex justify-between">
                       <span className="text-slate-400">Courier Partner:</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">{order.deliveryPartnerName}</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{order.deliveryPartner.name}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
