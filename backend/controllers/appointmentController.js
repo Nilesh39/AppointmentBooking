@@ -176,9 +176,6 @@ export const verifyPayment = async (req, res) => {
     // Complete transaction
     appointment.paymentStatus = 'paid';
     appointment.status = 'accepted'; // Auto-approve on successful payment
-    
-    // Generate virtual consult link automatically (custom WebRTC route)
-    appointment.videoLink = `/video-call/${appointment._id}`;
 
     // Get profiles for Invoice PDF
     const patientUser = await User.findById(appointment.patientId);
@@ -228,7 +225,6 @@ export const verifyPayment = async (req, res) => {
       <p>Your booking with Dr. ${doctorUser.name} is confirmed!</p>
       <p><strong>Date:</strong> ${appointment.date}</p>
       <p><strong>Time Slot:</strong> ${appointment.timeSlot}</p>
-      <p><strong>Video Consult Link:</strong> <a href="${appointment.videoLink}">${appointment.videoLink}</a></p>
       <p>You can download the invoice PDF from your dashboard at: ${process.env.CLIENT_URL || 'http://localhost:5173'}${invoiceUrl}</p>
     `;
 

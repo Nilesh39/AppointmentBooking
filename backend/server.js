@@ -97,40 +97,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // WebRTC Video Call Signaling Events
-  socket.on('join_call', (room) => {
-    socket.join(room);
-    console.log(`Socket ${socket.id} joined call room: ${room}`);
-    socket.to(room).emit('user_joined_call', socket.id);
-  });
 
-  socket.on('webrtc_offer', ({ room, offer }) => {
-    socket.to(room).emit('webrtc_offer', offer);
-  });
-
-  socket.on('webrtc_answer', ({ room, answer }) => {
-    socket.to(room).emit('webrtc_answer', answer);
-  });
-
-  socket.on('webrtc_ice_candidate', ({ room, candidate }) => {
-    socket.to(room).emit('webrtc_ice_candidate', candidate);
-  });
-
-  socket.on('leave_call', (room) => {
-    console.log(`Socket ${socket.id} leaving call room: ${room}`);
-    socket.to(room).emit('user_left_call');
-    socket.leave(room);
-  });
-
-  // Handle sudden disconnection - notify any active video call rooms before socket leaves
-  socket.on('disconnecting', () => {
-    console.log(`Socket disconnecting (pre-cleanup): ${socket.id}`);
-    for (const room of socket.rooms) {
-      if (room !== socket.id) {
-        socket.to(room).emit('user_left_call');
-      }
-    }
-  });
 
   // Handle disconnection
   socket.on('disconnect', () => {

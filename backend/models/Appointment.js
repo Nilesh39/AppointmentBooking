@@ -50,10 +50,7 @@ const appointmentSchema = new mongoose.Schema(
     stripeSessionId: {
       type: String,
     },
-    videoLink: {
-      type: String,
-      default: '',
-    },
+
     prescription: prescriptionSchema,
     invoiceUrl: {
       type: String,

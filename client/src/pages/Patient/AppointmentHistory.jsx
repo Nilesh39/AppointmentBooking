@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, DollarSign, Download, Video, MessageSquare, Star, RefreshCw, XCircle, ChevronRight, AlertCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Download, MessageSquare, Star, RefreshCw, XCircle, ChevronRight, AlertCircle, Loader } from 'lucide-react';
 import API, { BACKEND_URL } from '../../services/api.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import toast from 'react-hot-toast';
@@ -242,14 +242,7 @@ export default function AppointmentHistory() {
 
                 {app.status === 'accepted' && (
                   <>
-                      {app.videoLink && (
-                        <Link
-                          to={`/video-call/${app._id}`}
-                          className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 shadow-sm transition-colors"
-                        >
-                          <Video size={14} /> Join Call
-                        </Link>
-                      )}
+
                     <button
                       onClick={() => handleChatDirect(app.doctorId)}
                       className="flex-1 min-w-[calc(50%-4px)] md:flex-none px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center justify-center gap-1 transition-colors"

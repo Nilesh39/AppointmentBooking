@@ -19,7 +19,6 @@ import PaymentSuccess from './pages/Common/PaymentSuccess.jsx';
 import DoctorDetails from './pages/Common/DoctorDetails.jsx';
 import Unauthorized from './pages/Common/Unauthorized.jsx';
 import Chat from './pages/Common/Chat.jsx';
-import VideoCall from './pages/Common/VideoCall.jsx';
 
 // Patient pages
 import PatientDashboard from './pages/Patient/PatientDashboard.jsx';
@@ -142,11 +141,6 @@ export default function App() {
             <Route path="/doctor/availability" element={<ManageSlots />} />
             <Route path="/doctor/chat" element={<Chat />} />
           </Route>
-        </Route>
-
-        {/* Video Call Protected Route */}
-        <Route element={<ProtectedRoute allowedRoles={['patient', 'doctor']} />}>
-          <Route path="/video-call/:appointmentId" element={<VideoCall />} />
         </Route>
 
         {/* Admin Dashboard Routes */}

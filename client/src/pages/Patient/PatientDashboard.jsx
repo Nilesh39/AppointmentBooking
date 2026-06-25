@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, FileText, Heart, Video, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, FileText, Heart, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import API from '../../services/api.js';
@@ -121,14 +121,7 @@ export default function PatientDashboard() {
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{app.date}</p>
                     <p className="text-[10px] text-slate-400">{app.timeSlot}</p>
                     
-                    {app.paymentStatus === 'paid' && app.videoLink && (
-                      <Link
-                        to={`/video-call/${app._id}`}
-                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full"
-                      >
-                        <Video size={10} /> Live call
-                      </Link>
-                    )}
+
                   </div>
                 </div>
               ))

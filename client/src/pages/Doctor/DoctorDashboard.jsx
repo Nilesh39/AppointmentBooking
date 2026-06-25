@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, DollarSign, Users, Video, MessageSquare, Award, Clock, Loader2, Sparkles } from 'lucide-react';
+import { Calendar, DollarSign, Users, MessageSquare, Award, Clock, Loader2, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import API from '../../services/api.js';
@@ -270,14 +270,7 @@ export default function DoctorDashboard() {
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end mt-4 sm:mt-0">
                   {app.status === 'accepted' && (
                     <>
-                      {app.videoLink && (
-                        <Link
-                          to={`/video-call/${app._id}`}
-                          className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-3.5 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-1 shadow-sm transition-colors"
-                        >
-                          <Video size={14} /> Join
-                        </Link>
-                      )}
+
                       <button
                         onClick={() => handleChat(app.patientId)}
                         className="flex-1 min-w-[calc(50%-4px)] sm:flex-none px-3.5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl flex items-center justify-center gap-1 transition-colors"

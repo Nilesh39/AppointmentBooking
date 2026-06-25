@@ -173,7 +173,6 @@ const seedDatabase = async () => {
         status,
         paymentStatus,
         amount: docProf.fees,
-        videoLink: paymentStatus === 'paid' ? `https://meet.jit.si/mediconnect-${i}` : '',
       });
 
       // Write mock prescriptions & reviews for completed appointments
