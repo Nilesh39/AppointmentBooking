@@ -206,7 +206,8 @@ export default function VideoCall() {
         
         let stream;
         try {
-          // Attempt to get both video and audio
+          // Attempt to get both video and audio with high-fidelity constraints
+          console.log('[WebRTC] Attempting to acquire high-fidelity media stream');
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
               facingMode: 'user',
@@ -220,19 +221,27 @@ export default function VideoCall() {
             }
           });
         } catch (mediaErr) {
-          console.warn('Failed to acquire both audio and video, trying video-only first:', mediaErr);
+          console.warn('[WebRTC] Failed to acquire high-fidelity stream, trying standard audio and video:', mediaErr);
           try {
-            // Attempt to get video only
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            toast('Microphone is unavailable. Video call started without audio.', { icon: '⚠️' });
-          } catch (videoErr) {
+            // Attempt standard audio and video (no strict constraints)
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            console.log('[WebRTC] Acquired basic video and audio stream successfully');
+          } catch (basicErr) {
+            console.warn('[WebRTC] Failed standard audio and video, trying video-only:', basicErr);
             try {
-              // Attempt to get audio only
-              stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-              toast('Camera is unavailable. Call started with audio only.', { icon: '⚠️' });
-            } catch (audioErr) {
-              // Both failed, throw final error
-              throw new Error('Unable to access any camera or microphone hardware. Permissions might be denied.');
+              // Attempt to get video only
+              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              toast('Microphone is unavailable. Video call started without audio.', { icon: '⚠️' });
+            } catch (videoErr) {
+              console.warn('[WebRTC] Failed video-only, trying audio-only:', videoErr);
+              try {
+                // Attempt to get audio only
+                stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                toast('Camera is unavailable. Call started with audio only.', { icon: '⚠️' });
+              } catch (audioErr) {
+                // Both failed, throw final error
+                throw new Error('Unable to access any camera or microphone hardware. Permissions might be denied.');
+              }
             }
           }
         }
