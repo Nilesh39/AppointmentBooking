@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, DollarSign, Download, MessageSquare, Star, RefreshCw, XCircle, ChevronRight, AlertCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Download, MessageSquare, Star, RefreshCw, XCircle, ChevronRight, AlertCircle, Loader, Package } from 'lucide-react';
 import API, { BACKEND_URL } from '../../services/api.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import toast from 'react-hot-toast';
@@ -85,6 +85,17 @@ export default function AppointmentHistory() {
       }
     } catch (err) {
       toast.error('Payment checkout failed');
+    }
+  };
+
+  const handleBuyMedicines = async (appId) => {
+    try {
+      const res = await API.post(`/patient/orders/checkout/${appId}`);
+      if (res.data.url) {
+        window.location.href = res.data.url;
+      }
+    } catch (err) {
+      toast.error('Medications checkout failed');
     }
   };
 
@@ -215,6 +226,64 @@ export default function AppointmentHistory() {
                             Accept Reschedule
                           </button>
                         )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Prescribed Medications list and E-Pharmacy Button */}
+                  {app.status === 'completed' && app.prescription && app.prescription.medicines && app.prescription.medicines.length > 0 && (
+                    <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/85 rounded-2xl space-y-3 text-left">
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+                        <h5 className="text-[11px] font-bold text-slate-800 dark:text-white uppercase tracking-wider">Prescribed Medications</h5>
+                        <span className="text-[9px] text-slate-400 bg-slate-200/50 dark:bg-slate-800/80 px-2 py-0.5 rounded font-mono">
+                          {app.prescription.medicines.length} Item(s)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {app.prescription.medicines.map((med, idx) => (
+                          <div key={idx} className="text-xs p-2 bg-white dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-900/60 flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-slate-850 dark:text-slate-250">{med.name} ({med.dosage})</p>
+                              <p className="text-[10px] text-slate-400">{med.frequency} | {med.duration}</p>
+                            </div>
+                            <span className="text-xs font-extrabold text-primary dark:text-secondary">
+                              ${
+                                med.name.toLowerCase().includes('amoxicillin') ? '18.50' :
+                                med.name.toLowerCase().includes('paracetamol') || med.name.toLowerCase().includes('acetaminophen') ? '7.50' :
+                                med.name.toLowerCase().includes('ibuprofen') || med.name.toLowerCase().includes('advil') ? '8.90' :
+                                med.name.toLowerCase().includes('lipitor') || med.name.toLowerCase().includes('atorvastatin') ? '24.00' :
+                                med.name.toLowerCase().includes('metformin') ? '11.20' :
+                                med.name.toLowerCase().includes('aspirin') ? '6.00' :
+                                med.name.toLowerCase().includes('cough') || med.name.toLowerCase().includes('syrup') ? '9.50' : '14.99'
+                              }
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-850">
+                        <div className="text-xs">
+                          <span className="text-slate-455">Medications Total: </span>
+                          <span className="font-extrabold text-slate-800 dark:text-white">
+                            ${parseFloat(app.prescription.medicines.reduce((sum, med) => {
+                              const name = med.name.toLowerCase();
+                              let price = 14.99;
+                              if (name.includes('amoxicillin')) price = 18.50;
+                              else if (name.includes('paracetamol') || name.includes('acetaminophen')) price = 7.50;
+                              else if (name.includes('ibuprofen') || name.includes('advil')) price = 8.90;
+                              else if (name.includes('lipitor') || name.includes('atorvastatin')) price = 24.00;
+                              else if (name.includes('metformin')) price = 11.20;
+                              else if (name.includes('aspirin')) price = 6.00;
+                              else if (name.includes('cough') || name.includes('syrup')) price = 9.50;
+                              return sum + price;
+                            }, 0).toFixed(2))}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleBuyMedicines(app._id)}
+                          className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        >
+                          <Package size={13} /> Order Now
+                        </button>
                       </div>
                     </div>
                   )}

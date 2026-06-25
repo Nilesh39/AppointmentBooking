@@ -4,6 +4,7 @@ import PatientProfile from '../models/PatientProfile.js';
 import Appointment from '../models/Appointment.js';
 import Review from '../models/Review.js';
 import Notification from '../models/Notification.js';
+import MedicineOrder from '../models/MedicineOrder.js';
 import sendEmail from '../utils/sendEmail.js';
 
 // Helper to send socket notifications in real-time
@@ -403,6 +404,66 @@ export const sendSystemNotification = async (req, res) => {
     });
 
     res.json({ success: true, message: `System notification sent to ${users.length} users.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get all medicine orders on the platform
+// @route   GET /api/admin/orders
+// @access  Private (Admin only)
+export const getMedicineOrdersAdmin = async (req, res) => {
+  try {
+    const orders = await MedicineOrder.find({})
+      .populate('patientId', 'name email')
+      .populate({
+        path: 'appointmentId',
+        populate: {
+          path: 'doctorId',
+          select: 'name email',
+        },
+      })
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: orders });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update order shipping status
+// @route   PUT /api/admin/orders/:orderId/shipping
+// @access  Private (Admin only)
+export const updateShippingStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { shippingStatus } = req.body;
+
+    if (!['processing', 'shipped', 'out_for_delivery', 'delivered'].includes(shippingStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid shipping status' });
+    }
+
+    const order = await MedicineOrder.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    order.shippingStatus = shippingStatus;
+    await order.save();
+
+    const title = 'Pharmacy Order Update';
+    const message = `Your medicine order status has been updated to: ${shippingStatus.toUpperCase().replace(/_/g, ' ')}.`;
+    
+    await Notification.create({
+      userId: order.patientId,
+      title,
+      message,
+      type: 'general',
+    });
+
+    sendLiveNotification(req, order.patientId, title, message, 'general');
+
+    res.json({ success: true, message: 'Shipping status updated successfully', data: order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

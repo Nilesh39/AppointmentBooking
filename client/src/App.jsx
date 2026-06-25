@@ -27,6 +27,7 @@ import SearchDoctors from './pages/Patient/SearchDoctors.jsx';
 import AppointmentHistory from './pages/Patient/AppointmentHistory.jsx';
 import MedicalRecords from './pages/Patient/MedicalRecords.jsx';
 import MedicineReminders from './pages/Patient/MedicineReminders.jsx';
+import PharmacyCheckout from './pages/Patient/PharmacyCheckout.jsx';
 import Checkout from './pages/Patient/Checkout.jsx';
 
 // Doctor pages
@@ -131,6 +132,7 @@ export default function App() {
             <Route path="/payment-success" element={<PaymentSuccess />} />
           </Route>
           <Route path="/patient/checkout/:appointmentId" element={<Checkout />} />
+          <Route path="/patient/pharmacy-checkout/:orderId" element={<PharmacyCheckout />} />
         </Route>
 
         {/* Doctor Dashboard Routes */}

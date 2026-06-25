@@ -132,6 +132,24 @@ export const getDoctorAnalytics = async (req, res) => {
     const uniquePatientsResult = await Appointment.distinct('patientId', { doctorId });
     const uniquePatientsCount = uniquePatientsResult.length;
 
+    // Patient Retention Rate (repeat vs unique patients)
+    const appointmentsByPatient = await Appointment.aggregate([
+      { $match: { doctorId } },
+      { $group: { _id: '$patientId', count: { $sum: 1 } } }
+    ]);
+    const repeatPatients = appointmentsByPatient.filter(p => p.count > 1).length;
+    const patientRetentionRate = uniquePatientsCount > 0 
+      ? Math.round((repeatPatients / uniquePatientsCount) * 100) 
+      : 0;
+
+    // Popular Booking Slots
+    const popularSlots = await Appointment.aggregate([
+      { $match: { doctorId } },
+      { $group: { _id: '$timeSlot', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
     // Revenue by Month for Chart
     const monthlyRevenue = await Appointment.aggregate([
       { $match: { doctorId, paymentStatus: 'paid' } },
@@ -164,6 +182,8 @@ export const getDoctorAnalytics = async (req, res) => {
         pendingAppointmentsCount,
         totalRevenue,
         uniquePatientsCount,
+        patientRetentionRate,
+        popularSlots,
         monthlyRevenue,
         todaysAppointments,
         allAppointments,

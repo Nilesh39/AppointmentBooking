@@ -9,6 +9,10 @@ import {
   toggleFavouriteDoctor,
   getDoctors,
   getDoctorProfile,
+  checkoutMedicineOrder,
+  verifyMedicineOrder,
+  getMedicineOrders,
+  getMedicineOrderById,
 } from '../controllers/patientController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import upload from '../middleware/multer.js';
@@ -32,5 +36,11 @@ router.post('/reminders', addMedicineReminder);
 router.delete('/reminders/:reminderId', deleteMedicineReminder);
 
 router.post('/favourites/:doctorId', toggleFavouriteDoctor);
+
+// Pharmacy/Medicine Orders
+router.post('/orders/checkout/:appointmentId', checkoutMedicineOrder);
+router.post('/orders/verify', verifyMedicineOrder);
+router.get('/orders', getMedicineOrders);
+router.get('/orders/:orderId', getMedicineOrderById);
 
 export default router;

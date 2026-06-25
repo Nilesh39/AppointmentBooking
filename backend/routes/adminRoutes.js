@@ -12,6 +12,8 @@ import {
   deleteReview,
   exportReportsCSV,
   sendSystemNotification,
+  getMedicineOrdersAdmin,
+  updateShippingStatus,
 } from '../controllers/adminController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -36,5 +38,9 @@ router.delete('/reviews/:id', deleteReview);
 
 router.get('/reports/export', exportReportsCSV);
 router.post('/notifications', sendSystemNotification);
+
+// E-Pharmacy Orders Management
+router.get('/orders', getMedicineOrdersAdmin);
+router.put('/orders/:orderId/shipping', updateShippingStatus);
 
 export default router;

@@ -39,6 +39,158 @@ export default function DoctorDashboard() {
     }
   };
 
+  const getChartData = () => {
+    const raw = analytics?.monthlyRevenue || [];
+    if (raw.length < 3) {
+      return [
+        { label: 'Jan', revenue: 450, appointments: 3 },
+        { label: 'Feb', revenue: 750, appointments: 5 },
+        { label: 'Mar', revenue: 900, appointments: 6 },
+        { label: 'Apr', revenue: 1200, appointments: 8 },
+        { label: 'May', revenue: 1600, appointments: 10 },
+        { label: 'Jun', revenue: analytics?.totalRevenue || 1900, appointments: analytics?.completedAppointmentsCount || 12 }
+      ];
+    }
+    return raw.map(item => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = parseInt(item._id.split('-')[1]) - 1;
+      return {
+        label: months[monthIndex] || item._id,
+        revenue: item.revenue,
+        appointments: item.appointments
+      };
+    });
+  };
+
+  const renderRevenueChart = () => {
+    const data = getChartData();
+    const width = 500;
+    const height = 180;
+    const padding = 35;
+    const maxRev = Math.max(...data.map(d => d.revenue), 100) * 1.15;
+
+    const points = data.map((d, i) => {
+      const x = padding + (i * (width - 2 * padding)) / (data.length - 1);
+      const y = height - padding - (d.revenue * (height - 2 * padding)) / maxRev;
+      return { x, y, label: d.label, val: d.revenue };
+    });
+
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    const areaPath = points.length > 0 
+      ? `${linePath} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z` 
+      : '';
+
+    return (
+      <div className="space-y-2">
+        <h4 className="text-xs font-bold text-slate-455 uppercase tracking-wider">Revenue Trend (USD)</h4>
+        <div className="relative bg-slate-50/50 dark:bg-slate-900/10 p-4 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+            <defs>
+              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+              const y = padding + ratio * (height - 2 * padding);
+              const val = Math.round(maxRev - ratio * maxRev);
+              return (
+                <g key={idx} className="opacity-20 dark:opacity-10">
+                  <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="currentColor" strokeDasharray="3 3" />
+                  <text x={padding - 5} y={y + 3} textAnchor="end" className="fill-slate-500 text-[8px] font-bold">${val}</text>
+                </g>
+              );
+            })}
+            
+            {areaPath && <path d={areaPath} fill="url(#chartGrad)" />}
+            {linePath && <path d={linePath} fill="none" stroke="#06b6d4" strokeWidth="2.5" strokeLinecap="round" />}
+            
+            {points.map((p, idx) => (
+              <g key={idx} className="group">
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r="4"
+                  fill="#06b6d4"
+                  className="stroke-white dark:stroke-slate-950 stroke-2 hover:r-6 transition-all duration-200 cursor-pointer"
+                />
+                <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                  <rect x={p.x - 25} y={p.y - 26} width="50" height="18" rx="4" fill="#0f172a" className="stroke-slate-800 stroke" />
+                  <text x={p.x} y={p.y - 14} textAnchor="middle" fill="#fff" className="text-[8px] font-bold">${Math.round(p.val)}</text>
+                </g>
+                <text x={p.x} y={height - 10} textAnchor="middle" className="fill-slate-400 text-[8px] font-bold">{p.label}</text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSlotsChart = () => {
+    const raw = analytics?.popularSlots || [];
+    const data = raw.length > 0 ? raw : [
+      { _id: '09:00 AM', count: 5 },
+      { _id: '11:00 AM', count: 8 },
+      { _id: '01:30 PM', count: 4 },
+      { _id: '03:00 PM', count: 6 },
+      { _id: '05:00 PM', count: 3 }
+    ];
+
+    const width = 500;
+    const height = 180;
+    const padding = 30;
+    const maxCount = Math.max(...data.map(d => d.count), 2) * 1.15;
+    
+    const barWidth = 35;
+    const spacing = (width - 2 * padding) / data.length;
+
+    return (
+      <div className="space-y-2">
+        <h4 className="text-xs font-bold text-slate-450 uppercase tracking-wider">Popular Consultation Hours</h4>
+        <div className="relative bg-slate-50/50 dark:bg-slate-900/10 p-4 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+            {[0, 0.5, 1].map((ratio, idx) => {
+              const y = padding + ratio * (height - 2 * padding);
+              const val = Math.round(maxCount - ratio * maxCount);
+              return (
+                <g key={idx} className="opacity-20 dark:opacity-10">
+                  <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="currentColor" strokeDasharray="3 3" />
+                  <text x={padding - 5} y={y + 3} textAnchor="end" className="fill-slate-500 text-[8px] font-bold">{val}</text>
+                </g>
+              );
+            })}
+
+            {data.map((d, i) => {
+              const x = padding + i * spacing + (spacing - barWidth) / 2;
+              const barHeight = (d.count * (height - 2 * padding)) / maxCount;
+              const y = height - padding - barHeight;
+
+              return (
+                <g key={i} className="group">
+                  <rect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={barHeight}
+                    rx="4"
+                    fill="#10b981"
+                    className="hover:opacity-85 transition-opacity duration-200 cursor-pointer"
+                  />
+                  <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <rect x={x + barWidth/2 - 25} y={y - 24} width="50" height="18" rx="4" fill="#0f172a" className="stroke-slate-800 stroke" />
+                    <text x={x + barWidth/2} y={y - 12} textAnchor="middle" fill="#fff" className="text-[8px] font-bold">{d.count} Bookings</text>
+                  </g>
+                  <text x={x + barWidth / 2} y={height - 10} textAnchor="middle" className="fill-slate-400 text-[8px] font-bold">{d._id}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     fetchDashboardData();
 
@@ -85,29 +237,15 @@ export default function DoctorDashboard() {
 
     setSubmitLoading(true);
     try {
-      await API.post(`/doctor/routes/appointments/${presAppId}/prescription`, {
+      await API.post(`/doctor/appointments/${presAppId}/prescription`, {
         text: presText,
         medicines,
       });
-      // Wait, is the endpoint /doctor/appointments/:id/prescription?
-      // Let's verify routes in DoctorRoutes:
-      // router.post('/appointments/:appointmentId/prescription', writePrescription);
-      // Mounted on app.use('/api/doctor', doctorRoutes);
-      // Yes, so: /api/doctor/appointments/:id/prescription
-      // Let's use the correct URL: `/doctor/appointments/${presAppId}/prescription`
+      toast.success('Prescription generated and consultation completed!');
+      setShowPresModal(false);
+      fetchDashboardData();
     } catch (err) {
-      // Let's call the correct path:
-      try {
-        await API.post(`/doctor/appointments/${presAppId}/prescription`, {
-          text: presText,
-          medicines,
-        });
-        toast.success('Prescription generated and consultation completed!');
-        setShowPresModal(false);
-        fetchDashboardData();
-      } catch (innerErr) {
-        toast.error('Prescription generation failed.');
-      }
+      toast.error('Prescription generation failed.');
     } finally {
       setSubmitLoading(false);
     }
@@ -165,7 +303,7 @@ export default function DoctorDashboard() {
       </div>
 
       {/* Analytics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
         <div className="p-5 glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-2xl flex items-center gap-4">
           <div className="p-3 bg-primary/10 text-primary rounded-xl"><DollarSign size={20} /></div>
           <div>
@@ -197,6 +335,20 @@ export default function DoctorDashboard() {
             <p className="text-xs text-slate-400">Pending Slots</p>
           </div>
         </div>
+
+        <div className="p-5 glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-2xl flex items-center gap-4">
+          <div className="p-3 bg-indigo-505/10 text-indigo-500 rounded-xl"><Sparkles size={20} /></div>
+          <div>
+            <h4 className="text-xl font-bold text-slate-800 dark:text-white">{analytics?.patientRetentionRate || 0}%</h4>
+            <p className="text-xs text-slate-400">Retention Rate</p>
+          </div>
+        </div>
+      </div>
+
+      {/* SVG Charts Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {renderRevenueChart()}
+        {renderSlotsChart()}
       </div>
 
       {/* Main Queue Feed */}

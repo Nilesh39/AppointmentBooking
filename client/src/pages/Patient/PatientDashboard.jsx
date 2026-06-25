@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper, AnimatedItem } from '../../components/Shared/PageWrapper.jsx';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, Clock, FileText, Heart, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, FileText, Heart, CheckCircle, Package } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useSocketStore } from '../../store/socketStore.js';
 import API from '../../services/api.js';
@@ -10,6 +10,7 @@ export default function PatientDashboard() {
   const { user, profile, checkAuth } = useAuthStore();
   const { socket } = useSocketStore();
   const [appointments, setAppointments] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -17,8 +18,12 @@ export default function PatientDashboard() {
     try {
       const res = await API.get('/appointments');
       setAppointments(res.data.data);
+      const orderRes = await API.get('/patient/orders');
+      if (orderRes.data.success) {
+        setOrders(orderRes.data.data);
+      }
     } catch (err) {
-      console.error('Failed to load appointments:', err);
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -155,6 +160,71 @@ export default function PatientDashboard() {
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Pharmacy Orders Tracker */}
+      <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-3xl p-6 space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Package size={18} className="text-primary" /> Active Pharmacy Orders
+          </h3>
+          <span className="text-xs text-slate-400 font-bold font-mono bg-slate-100 dark:bg-slate-850 px-2 py-0.5 rounded">
+            {orders.filter(o => o.paymentStatus === 'paid').length} Paid Order(s)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+          {orders.filter(o => o.paymentStatus === 'paid').length === 0 ? (
+            <p className="text-xs text-slate-400 py-6 text-center col-span-2">No active pharmacy orders found. You can purchase medications from completed consultations.</p>
+          ) : (
+            orders.filter(o => o.paymentStatus === 'paid').map((ord) => (
+              <div key={ord._id} className="p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-2xl space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <div>
+                    <span className="font-bold text-slate-700 dark:text-slate-350">Order ID: </span>
+                    <span className="font-mono text-slate-450">{ord._id.substring(18)}</span>
+                  </div>
+                  <span className="font-bold text-slate-500">{new Date(ord.createdAt).toLocaleDateString()}</span>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">MEDICINES</p>
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    {ord.medicines.map(m => m.name).join(', ')}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px] text-slate-400">
+                    <span>SHIPPING PROGRESS</span>
+                    <span className="font-bold text-primary dark:text-secondary uppercase tracking-wider text-[9px]">{ord.shippingStatus.replace(/_/g, ' ')}</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        ord.shippingStatus === 'delivered' ? 'bg-emerald-500' :
+                        ord.shippingStatus === 'out_for_delivery' ? 'bg-indigo-500' :
+                        ord.shippingStatus === 'shipped' ? 'bg-blue-500' : 'bg-primary'
+                      }`}
+                      style={{
+                        width:
+                          ord.shippingStatus === 'delivered' ? '100%' :
+                          ord.shippingStatus === 'out_for_delivery' ? '75%' :
+                          ord.shippingStatus === 'shipped' ? '50%' : '25%'
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[9px] text-slate-500 font-semibold font-mono">
+                    <span className={ord.shippingStatus === 'processing' ? 'text-primary font-bold' : ''}>Processing</span>
+                    <span className={ord.shippingStatus === 'shipped' ? 'text-blue-500 font-bold' : ''}>Shipped</span>
+                    <span className={ord.shippingStatus === 'out_for_delivery' ? 'text-indigo-500 font-bold' : ''}>Out For Delivery</span>
+                    <span className={ord.shippingStatus === 'delivered' ? 'text-emerald-500 font-bold' : ''}>Delivered</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </PageWrapper>
