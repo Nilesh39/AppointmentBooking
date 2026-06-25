@@ -29,10 +29,31 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// Helper for dynamic CORS origin resolution in development
+const getCorsOrigin = (origin, callback) => {
+  // Allow requests with no origin (like mobile apps, curl, postman)
+  if (!origin) return callback(null, true);
+
+  if (process.env.NODE_ENV === 'development') {
+    return callback(null, true);
+  }
+
+  const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ];
+  if (allowedOrigins.includes(origin)) {
+    callback(null, true);
+  } else {
+    callback(new Error('Not allowed by CORS'));
+  }
+};
+
 // Socket.io integration
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: getCorsOrigin,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -139,7 +160,7 @@ app.use(
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: getCorsOrigin,
     credentials: true,
   })
 );

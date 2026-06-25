@@ -640,7 +640,13 @@ export default function VideoCall() {
             />
           ) : (
             <div className="flex flex-col items-center gap-4 text-slate-400 p-4 max-w-sm text-center animate-pulse">
-              {callStatus === 'waiting' ? (
+              {callStatus === 'initializing' ? (
+                <>
+                  <Loader2 className="animate-spin text-teal-400" size={44} />
+                  <p className="text-base font-semibold tracking-wide text-teal-200">Initializing media devices...</p>
+                  <p className="text-xs text-slate-500">Please allow camera and microphone access when prompted</p>
+                </>
+              ) : callStatus === 'waiting' ? (
                 <>
                   <Loader2 className="animate-spin text-teal-400" size={44} />
                   <p className="text-base font-semibold tracking-wide text-teal-200">Waiting for peer to join...</p>
