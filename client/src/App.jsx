@@ -88,7 +88,7 @@ function DashboardLayout() {
       <Navbar />
       <div className="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4">
         <Sidebar />
-        <main className="flex-1 p-2 md:p-4 overflow-y-auto">
+        <main className="flex-1 p-2 md:p-4 pb-28 md:pb-4 overflow-y-auto">
           <Outlet />
         </main>
       </div>
