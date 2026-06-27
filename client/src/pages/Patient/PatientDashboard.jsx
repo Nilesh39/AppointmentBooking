@@ -311,102 +311,144 @@ export default function PatientDashboard() {
 
               {/* ── ETA & Status Summary Strip ── */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3.5 bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 border border-primary/10 dark:border-primary/20 rounded-2xl text-center">
+                <div className="p-3.5 bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 border border-primary/10 dark:border-primary/20 rounded-2xl text-center" style={{ animation: 'fadeInUp .3s ease-out' }}>
                   <Timer size={16} className="text-primary mx-auto mb-1" />
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">ETA</p>
                   <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5">
                     {selectedTrackingOrder.shippingStatus === 'delivered' ? '✅ Done' : (etaCountdown || '—')}
                   </p>
                 </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-center">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-center" style={{ animation: 'fadeInUp .4s ease-out' }}>
                   <Calendar size={16} className="text-blue-500 mx-auto mb-1" />
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Delivery Date</p>
                   <p className="text-[11px] font-bold text-slate-800 dark:text-white mt-0.5">
                     {selectedTrackingOrder.estimatedDeliveryDate
-                      ? new Date(selectedTrackingOrder.estimatedDeliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                      ? new Date(selectedTrackingOrder.estimatedDeliveryDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
                       : 'Pending'}
                   </p>
                 </div>
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-center">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-center" style={{ animation: 'fadeInUp .5s ease-out' }}>
                   <Route size={16} className="text-indigo-500 mx-auto mb-1" />
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Progress</p>
                   <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5">{selStatus?.pct}%</p>
                 </div>
               </div>
 
-              {/* ── Journey Route Visualization ── */}
-              {selectedTrackingOrder.journeyRoute && selectedTrackingOrder.journeyRoute.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Route size={11} /> Package Journey Route
-                  </h4>
-                  <div className="relative bg-gradient-to-r from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 overflow-x-auto">
-                    {/* Progress line */}
-                    <div className="flex items-center gap-0 min-w-[500px]">
-                      {selectedTrackingOrder.journeyRoute.map((stop, idx) => {
+              {/* ── Journey Route — Vertical Timeline ── */}
+              {selectedTrackingOrder.journeyRoute && selectedTrackingOrder.journeyRoute.length > 0 && (() => {
+                const stopIcons = { origin: '🏥', sorting: '📋', hub: '🏢', local: '📍', last_mile: '🛵', destination: '🏠' };
+                const stops = selectedTrackingOrder.journeyRoute;
+                const currentIdx = stops.findIndex(s => s.status === 'current');
+                const totalDistance = stops.reduce((sum, s) => sum + (s.distanceFromPrevKm || 0), 0);
+                const coveredDistance = stops.reduce((sum, s, i) => sum + (s.status === 'completed' || s.status === 'current' ? (s.distanceFromPrevKm || 0) : 0), 0);
+                
+                return (
+                  <div className="space-y-2.5" style={{ animation: 'fadeInUp .4s ease-out' }}>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Route size={11} /> Package Journey
+                      </h4>
+                      <span className="text-[9px] font-bold text-primary dark:text-secondary">
+                        {coveredDistance}km / {totalDistance}km covered
+                      </span>
+                    </div>
+
+                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900/40 dark:to-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-4">
+                      {stops.map((stop, idx) => {
                         const isCompleted = stop.status === 'completed';
                         const isCurrent = stop.status === 'current';
-                        const isLast = idx === selectedTrackingOrder.journeyRoute.length - 1;
-                        const stopTypeIcons = { origin: '🏥', sorting: '📋', hub: '🏢', local: '📍', last_mile: '🛣️', destination: '🏠' };
+                        const isLast = idx === stops.length - 1;
+                        const arrTime = stop.actualArrival || stop.estimatedArrival;
                         
                         return (
-                          <React.Fragment key={idx}>
-                            <div className="flex flex-col items-center relative" style={{ minWidth: 70 }}>
-                              {/* Stop dot */}
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm z-10 transition-all duration-500 ${
+                          <div key={idx} className="flex gap-3" style={{ animation: `fadeInUp ${0.2 + idx * 0.08}s ease-out` }}>
+                            {/* Left: dot + vertical line */}
+                            <div className="flex flex-col items-center" style={{ minWidth: 32 }}>
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 transition-all duration-500 ${
                                 isCompleted ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' :
-                                isCurrent ? 'bg-primary text-white shadow-lg shadow-primary/40 ring-4 ring-primary/20 animate-pulse scale-110' :
+                                isCurrent ? 'bg-primary text-white shadow-lg shadow-primary/40 scale-110' :
                                 'bg-slate-200 dark:bg-slate-800 text-slate-400'
-                              }`}>
-                                {isCompleted ? '✓' : (stopTypeIcons[stop.stopType] || '📦')}
+                              }`} style={isCurrent ? { animation: 'pulseRing 2s infinite' } : {}}>
+                                {isCompleted ? '✓' : (stopIcons[stop.stopType] || '📦')}
                               </div>
-                              {/* Stop info */}
-                              <p className={`text-[8px] font-bold text-center mt-1.5 leading-tight max-w-[80px] ${
-                                isCurrent ? 'text-primary dark:text-secondary' :
-                                isCompleted ? 'text-emerald-600 dark:text-emerald-400' :
-                                'text-slate-400'
-                              }`}>
-                                {stop.stopName.length > 20 ? stop.stopName.substring(0, 18) + '…' : stop.stopName}
-                              </p>
-                              {/* Time */}
-                              {(stop.actualArrival || stop.estimatedArrival) && (
-                                <p className={`text-[7px] font-mono mt-0.5 ${isCurrent ? 'text-primary/70' : 'text-slate-400'}`}>
-                                  {new Date(stop.actualArrival || stop.estimatedArrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              )}
-                              {/* Distance badge */}
-                              {stop.distanceFromPrevKm > 0 && idx > 0 && (
-                                <span className="text-[7px] text-slate-400 font-bold mt-0.5">{stop.distanceFromPrevKm}km</span>
+                              {!isLast && (
+                                <div className="w-0.5 flex-1 my-1 relative rounded-full overflow-hidden" style={{ minHeight: 20 }}>
+                                  <div className="absolute inset-0 bg-slate-200 dark:bg-slate-800" />
+                                  <div
+                                    className="absolute inset-x-0 top-0 rounded-full transition-all duration-700"
+                                    style={{
+                                      height: isCompleted ? '100%' : (isCurrent ? '50%' : '0%'),
+                                      background: 'linear-gradient(180deg, #10b981, var(--color-primary))',
+                                    }}
+                                  />
+                                  {isCurrent && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 text-xs" style={{ top: '40%', animation: 'truckMove 1.5s ease-in-out infinite' }}>
+                                      🚚
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            {/* Connector line */}
-                            {!isLast && (
-                              <div className="flex-1 h-1 rounded-full mx-1 relative" style={{ minWidth: 30 }}>
-                                <div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                                <div
-                                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
-                                  style={{
-                                    width: isCompleted ? '100%' : (isCurrent ? '50%' : '0%'),
-                                    background: 'linear-gradient(90deg, #10b981, var(--color-primary))',
-                                  }}
-                                />
-                                {isCurrent && (
-                                  <div className="absolute top-1/2 -translate-y-1/2 animate-bounce" style={{ left: '45%' }}>
-                                    <span className="text-sm">🚚</span>
+                            {/* Right: stop details */}
+                            <div className={`flex-1 pb-4 ${isLast ? 'pb-0' : ''}`}>
+                              <div className={`p-2.5 rounded-xl transition-all ${
+                                isCurrent ? 'bg-primary/5 dark:bg-primary/10 border border-primary/15 dark:border-primary/20' :
+                                isCompleted ? 'bg-emerald-50/50 dark:bg-emerald-950/10' : ''
+                              }`}>
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className={`text-[11px] font-extrabold leading-snug ${
+                                      isCurrent ? 'text-primary dark:text-secondary' :
+                                      isCompleted ? 'text-emerald-700 dark:text-emerald-400' :
+                                      'text-slate-500 dark:text-slate-500'
+                                    }`}>
+                                      {stop.stopName}
+                                    </p>
+                                    {isCurrent && (
+                                      <span className="inline-flex items-center gap-1 text-[8px] font-bold text-primary dark:text-secondary bg-primary/10 dark:bg-primary/20 px-1.5 py-0.5 rounded-md mt-1" style={{ animation: 'pulseRing 2s infinite' }}>
+                                        <MapPin size={7} /> Package is here
+                                      </span>
+                                    )}
+                                    {isCompleted && stop.actualArrival && (
+                                      <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 flex items-center gap-0.5">
+                                        ✓ Cleared
+                                      </span>
+                                    )}
                                   </div>
-                                )}
+                                  <div className="text-right shrink-0 ml-2">
+                                    {arrTime && (
+                                      <p className={`text-[9px] font-bold ${
+                                        isCurrent ? 'text-primary dark:text-secondary' :
+                                        isCompleted ? 'text-emerald-600 dark:text-emerald-400' :
+                                        'text-slate-400'
+                                      }`}>
+                                        {new Date(arrTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                      </p>
+                                    )}
+                                    {arrTime && (
+                                      <p className="text-[8px] text-slate-400 font-mono">
+                                        {new Date(arrTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                      </p>
+                                    )}
+                                    {stop.distanceFromPrevKm > 0 && idx > 0 && (
+                                      <span className="text-[8px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                        {stop.distanceFromPrevKm} km
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                          </React.Fragment>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ── Delivery Partner Profile Card ── */}
-              <div className="space-y-2">
+              <div className="space-y-2" style={{ animation: 'fadeInUp .5s ease-out' }}>
                 <h4 className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Truck size={11} /> Delivery Partner
                 </h4>
@@ -415,8 +457,11 @@ export default function PatientDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3.5">
                         {/* Partner Avatar */}
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xl font-black shadow-lg shadow-primary/20">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xl font-black shadow-lg shadow-primary/20 relative">
                           {dp.name.charAt(0).toUpperCase()}
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-950 flex items-center justify-center">
+                            <span className="text-[6px] text-white">✓</span>
+                          </div>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm font-extrabold text-slate-800 dark:text-white">{dp.name}</p>
@@ -445,6 +490,10 @@ export default function PatientDashboard() {
                               )}
                             </div>
                           )}
+                          {/* Phone number display */}
+                          {dp.phone && (
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{dp.phone}</p>
+                          )}
                         </div>
                       </div>
                       {/* Call button */}
@@ -471,12 +520,12 @@ export default function PatientDashboard() {
               </div>
 
               {/* ── Master Progress Bar ── */}
-              <div className="space-y-2">
+              <div className="space-y-2" style={{ animation: 'fadeInUp .55s ease-out' }}>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Overall Progress</span>
                   <span className="text-[10px] font-extrabold text-primary dark:text-secondary">{selStatus?.pct}% Complete</span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-900 h-3 rounded-full overflow-hidden relative">
+                <div className="w-full bg-slate-100 dark:bg-slate-900 h-3.5 rounded-full overflow-hidden relative">
                   <div
                     className="h-full rounded-full transition-all duration-1000 ease-out relative"
                     style={{
@@ -484,23 +533,29 @@ export default function PatientDashboard() {
                       background: selectedTrackingOrder.shippingStatus === 'delivered'
                         ? 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7)'
                         : 'linear-gradient(90deg, var(--color-primary), var(--color-secondary), #818cf8)',
+                      boxShadow: selectedTrackingOrder.shippingStatus === 'delivered'
+                        ? '0 0 12px rgba(16,185,129,0.4)'
+                        : '0 0 12px rgba(var(--color-primary-rgb, 99,102,241), 0.4)',
                     }}
                   >
-                    <div className="absolute inset-0 bg-white/20 rounded-full" style={{ animation: 'shimmer 2s infinite linear', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
+                    <div className="absolute inset-0 bg-white/20 rounded-full" style={{ animation: 'shimmer 2s infinite linear', backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />
                   </div>
                 </div>
                 {/* Status dot steps */}
-                <div className="flex justify-between px-1">
+                <div className="flex justify-between px-1 mt-1">
                   {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
                     const statusKeys = Object.keys(STATUS_CONFIG);
                     const currentIdx = statusKeys.indexOf(selectedTrackingOrder.shippingStatus);
                     const thisIdx = statusKeys.indexOf(key);
                     const isDone = thisIdx <= currentIdx;
+                    const isActive = thisIdx === currentIdx;
                     return (
-                      <div key={key} className="flex flex-col items-center gap-1" style={{ width: '16%' }}>
-                        <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
-                          isDone ? (thisIdx === currentIdx ? 'bg-primary ring-4 ring-primary/20 scale-125' : 'bg-emerald-500') : 'bg-slate-200 dark:bg-slate-800'
-                        }`} />
+                      <div key={key} className="flex flex-col items-center gap-1.5" style={{ width: '16%' }}>
+                        <div className={`w-3 h-3 rounded-full transition-all duration-500 ${
+                          isDone
+                            ? (isActive ? 'bg-primary ring-4 ring-primary/20 scale-125' : 'bg-emerald-500')
+                            : 'bg-slate-200 dark:bg-slate-800'
+                        }`} style={isActive ? { animation: 'pulseRing 2s infinite' } : {}} />
                         <span className={`text-[7px] font-bold text-center leading-tight ${isDone ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}>
                           {cfg.label}
                         </span>
@@ -511,25 +566,31 @@ export default function PatientDashboard() {
               </div>
 
               {/* ── Shipment Timeline ── */}
-              <div className="space-y-3">
+              <div className="space-y-3" style={{ animation: 'fadeInUp .6s ease-out' }}>
                 <h4 className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock size={11} /> Shipment Timeline
                 </h4>
                 {selectedTrackingOrder.trackingUpdates && selectedTrackingOrder.trackingUpdates.length > 0 ? (
-                  <div className="relative pl-7 space-y-5 before:absolute before:left-[12px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-primary/30 before:via-slate-200 before:to-slate-200 dark:before:from-primary/30 dark:before:via-slate-800 dark:before:to-slate-800">
+                  <div className="relative pl-7 space-y-4 before:absolute before:left-[12px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-primary/30 before:via-slate-200 before:to-slate-200 dark:before:from-primary/30 dark:before:via-slate-800 dark:before:to-slate-800">
                     {selectedTrackingOrder.trackingUpdates
                       .slice()
                       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
                       .map((update, index) => {
                         const isLatest = index === 0;
                         const updateSc = STATUS_CONFIG[update.status] || STATUS_CONFIG.processing;
+                        const timeDiff = Date.now() - new Date(update.timestamp).getTime();
+                        const minsAgo = Math.floor(timeDiff / 60000);
+                        const hoursAgo = Math.floor(timeDiff / 3600000);
+                        const daysAgo = Math.floor(timeDiff / 86400000);
+                        const relativeTime = daysAgo > 0 ? `${daysAgo}d ago` : hoursAgo > 0 ? `${hoursAgo}h ago` : minsAgo > 1 ? `${minsAgo}m ago` : 'Just now';
+
                         return (
-                          <div key={update._id || index} className={`relative text-xs transition-all ${isLatest ? 'scale-[1.02]' : ''}`}>
-                            <div className={`absolute -left-[22px] top-1 w-3 h-3 rounded-full border-2 transition-all ${
+                          <div key={update._id || index} className="relative text-xs" style={{ animation: `fadeInUp ${0.3 + index * 0.1}s ease-out` }}>
+                            <div className={`absolute -left-[22px] top-1.5 w-3 h-3 rounded-full border-2 transition-all ${
                               isLatest
-                                ? 'bg-primary border-primary ring-4 ring-primary/20 animate-pulse'
+                                ? 'bg-primary border-primary ring-4 ring-primary/20'
                                 : 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700'
-                            }`} />
+                            }`} style={isLatest ? { animation: 'pulseRing 2s infinite' } : {}} />
                             <div className={`p-3 rounded-xl border transition-all ${
                               isLatest
                                 ? 'bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/20'
@@ -541,14 +602,17 @@ export default function PatientDashboard() {
                                 }`}>
                                   {updateSc.icon} {update.status.replace(/_/g, ' ')}
                                 </span>
-                                <span className="text-[9px] text-slate-400 font-mono">
-                                  {new Date(update.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
-                                  {new Date(update.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                                <div className="text-right">
+                                  <span className="text-[9px] text-slate-400 font-mono block">
+                                    {new Date(update.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })},{' '}
+                                    {new Date(update.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                  </span>
+                                  <span className="text-[8px] text-slate-400/70 font-bold">{relativeTime}</span>
+                                </div>
                               </div>
                               <p className="text-xs text-slate-700 dark:text-slate-300 font-semibold leading-relaxed">{update.activity}</p>
                               {update.location && (
-                                <span className="inline-flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                                <span className="inline-flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">
                                   <MapPin size={8} /> {update.location}
                                 </span>
                               )}
@@ -597,7 +661,20 @@ export default function PatientDashboard() {
           0% { background-position: -200% center; }
           100% { background-position: 200% center; }
         }
+        @keyframes fadeInUp {
+          from { transform: translateY(12px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulseRing {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 99,102,241), 0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(var(--color-primary-rgb, 99,102,241), 0); }
+        }
+        @keyframes truckMove {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(6px); }
+        }
       `}</style>
     </PageWrapper>
   );
 }
+
