@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -29,6 +30,13 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// ═══════════════════════════════════════════════════
+// 🔒 CLOUDFLARE & PROXY TRUST CONFIGURATION
+// ═══════════════════════════════════════════════════
+// Trust Cloudflare's proxy headers (CF-Connecting-IP, X-Forwarded-For)
+// This ensures rate limiting uses the real client IP, not Cloudflare's IP
+app.set('trust proxy', 1);
+
 // Helper for dynamic CORS origin resolution in development
 const getCorsOrigin = (origin, callback) => {
   // Allow requests with no origin (like mobile apps, curl, postman)
@@ -42,7 +50,7 @@ const getCorsOrigin = (origin, callback) => {
     process.env.CLIENT_URL,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-  ];
+  ].filter(Boolean);
   if (allowedOrigins.includes(origin)) {
     callback(null, true);
   } else {
@@ -118,13 +126,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Security & Request Parsing Middlewares
+// ═══════════════════════════════════════════════════
+// 🛡️ SECURITY MIDDLEWARES
+// ═══════════════════════════════════════════════════
+
+// Helmet — Sets various HTTP security headers
 app.use(
   helmet({
     crossOriginResourcePolicy: false, // Allows displaying static images locally
+    contentSecurityPolicy: false, // Let Cloudflare handle CSP
   })
 );
 
+// Additional Security Headers (complements Cloudflare)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Remove server fingerprint
+  res.removeHeader('X-Powered-By');
+  next();
+});
+
+// CORS
 app.use(
   cors({
     origin: getCorsOrigin,
@@ -132,9 +158,60 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Request Size Limits — Prevents large payload attacks
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// ═══════════════════════════════════════════════════
+// 🚦 RATE LIMITING (Works with Cloudflare Proxy)
+// ═══════════════════════════════════════════════════
+
+// General API rate limiter — 100 requests per 15 minutes per IP
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  message: {
+    success: false,
+    message: 'Too many requests from this IP. Please try again after 15 minutes.',
+  },
+  // Use Cloudflare's real IP header
+  keyGenerator: (req) => {
+    return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  },
+});
+
+// Strict Auth rate limiter — 20 requests per 15 minutes (login, register, password reset)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many authentication attempts. Please try again after 15 minutes.',
+  },
+  keyGenerator: (req) => {
+    return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  },
+});
+
+// Payment rate limiter — 10 requests per 15 minutes
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many payment requests. Please try again after 15 minutes.',
+  },
+  keyGenerator: (req) => {
+    return req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  },
+});
 
 // Serve Static Directories
 app.use(express.static('public'));
@@ -147,20 +224,23 @@ dirs.forEach((dir) => {
   }
 });
 
-// Mount API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/patient', patientRoutes);
-app.use('/api/doctor', doctorRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/notifications', notificationRoutes);
+// ═══════════════════════════════════════════════════
+// 📡 MOUNT API ROUTES WITH RATE LIMITERS
+// ═══════════════════════════════════════════════════
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/patient', apiLimiter, patientRoutes);
+app.use('/api/doctor', apiLimiter, doctorRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/appointments', apiLimiter, appointmentRoutes);
+app.use('/api/chat', apiLimiter, chatRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 // Root Health Check Route
 app.get('/', (req, res) => {
   res.json({
     status: 'success',
     message: 'MediConnect API server is running smoothly.',
+    cloudflare: req.headers['cf-connecting-ip'] ? 'proxied' : 'direct',
   });
 });
 
@@ -169,5 +249,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🛡️  Security: Helmet + Rate Limiting + CORS active`);
+  console.log(`☁️  Cloudflare proxy trust: enabled`);
 });
