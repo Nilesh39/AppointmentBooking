@@ -407,16 +407,95 @@ export const verifyMedicineOrder = async (req, res) => {
     }
 
     order.paymentStatus = 'paid';
-    
-    // Initialize tracking updates timeline
-    if (!order.trackingUpdates || order.trackingUpdates.length === 0) {
-      order.trackingUpdates = [{
+
+    // ── Auto-assign delivery partner from realistic pool ──
+    const deliveryPartners = [
+      { name: 'Rajesh Kumar', phone: '+91 98765 43210', vehicleType: 'Bike', vehicleNumber: 'DL-12 AB 3456', rating: 4.8, totalDeliveries: 1247 },
+      { name: 'Amit Sharma', phone: '+91 87654 32109', vehicleType: 'Scooter', vehicleNumber: 'MH-04 CD 7890', rating: 4.6, totalDeliveries: 892 },
+      { name: 'Priya Singh', phone: '+91 76543 21098', vehicleType: 'Bike', vehicleNumber: 'KA-05 EF 1234', rating: 4.9, totalDeliveries: 2103 },
+      { name: 'Vikram Yadav', phone: '+91 65432 10987', vehicleType: 'Van', vehicleNumber: 'UP-32 GH 5678', rating: 4.7, totalDeliveries: 1589 },
+      { name: 'Sneha Patel', phone: '+91 54321 09876', vehicleType: 'Scooter', vehicleNumber: 'GJ-01 IJ 9012', rating: 4.5, totalDeliveries: 673 },
+      { name: 'Arjun Reddy', phone: '+91 93456 78901', vehicleType: 'Bike', vehicleNumber: 'TS-08 KL 3456', rating: 4.8, totalDeliveries: 1834 },
+    ];
+    const selectedPartner = deliveryPartners[Math.floor(Math.random() * deliveryPartners.length)];
+    order.deliveryPartner = selectedPartner;
+
+    // ── Auto-set estimated delivery date (3-5 days from now) ──
+    const deliveryDays = 3 + Math.floor(Math.random() * 3); // 3-5 days
+    const now = new Date();
+    const estimatedDate = new Date(now.getTime() + deliveryDays * 24 * 60 * 60 * 1000);
+    order.estimatedDeliveryDate = estimatedDate;
+
+    // ── Auto-generate tracking number ──
+    const trkId = 'TRK' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    order.trackingNumber = trkId;
+
+    // ── Auto-set current location ──
+    order.currentLocation = order.originHub || 'MediConnect Central Pharmacy';
+
+    // ── Auto-generate realistic 6-stop journey route ──
+    const totalMs = estimatedDate.getTime() - now.getTime();
+    order.journeyRoute = [
+      {
+        stopName: order.originHub || 'MediConnect Central Pharmacy',
+        stopType: 'origin',
+        estimatedArrival: now,
+        actualArrival: now,
+        status: 'current',
+        distanceFromPrevKm: 0,
+      },
+      {
+        stopName: 'Regional Sorting Facility',
+        stopType: 'sorting',
+        estimatedArrival: new Date(now.getTime() + totalMs * 0.15),
+        status: 'upcoming',
+        distanceFromPrevKm: 45,
+      },
+      {
+        stopName: 'City Distribution Hub',
+        stopType: 'hub',
+        estimatedArrival: new Date(now.getTime() + totalMs * 0.4),
+        status: 'upcoming',
+        distanceFromPrevKm: 120,
+      },
+      {
+        stopName: 'Local Delivery Station',
+        stopType: 'local',
+        estimatedArrival: new Date(now.getTime() + totalMs * 0.7),
+        status: 'upcoming',
+        distanceFromPrevKm: 25,
+      },
+      {
+        stopName: 'Last Mile — Out for Delivery',
+        stopType: 'last_mile',
+        estimatedArrival: new Date(now.getTime() + totalMs * 0.9),
+        status: 'upcoming',
+        distanceFromPrevKm: 8,
+      },
+      {
+        stopName: order.shippingAddress || 'Patient Address',
+        stopType: 'destination',
+        estimatedArrival: estimatedDate,
+        status: 'upcoming',
+        distanceFromPrevKm: 3,
+      },
+    ];
+
+    // ── Auto-generate rich initial tracking timeline ──
+    order.trackingUpdates = [
+      {
         status: 'processing',
-        activity: 'Order placed & payment verified. Preparing your medications.',
-        location: 'Partner Pharmacy Central',
-        timestamp: new Date()
-      }];
-    }
+        activity: 'Order placed & payment verified. Your prescription is being reviewed by our pharmacy team.',
+        location: order.originHub || 'MediConnect Central Pharmacy',
+        timestamp: now,
+      },
+      {
+        status: 'processing',
+        activity: `Delivery partner ${selectedPartner.name} assigned. Estimated delivery by ${estimatedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}.`,
+        location: order.originHub || 'MediConnect Central Pharmacy',
+        timestamp: new Date(now.getTime() + 60000), // 1 minute later
+      },
+    ];
 
     await order.save();
 
@@ -440,6 +519,53 @@ export const getMedicineOrders = async (req, res) => {
         },
       })
       .sort({ createdAt: -1 });
+
+    // Auto-populate tracking data for old orders that are missing it
+    const deliveryPartners = [
+      { name: 'Rajesh Kumar', phone: '+91 98765 43210', vehicleType: 'Bike', vehicleNumber: 'DL-12 AB 3456', rating: 4.8, totalDeliveries: 1247 },
+      { name: 'Amit Sharma', phone: '+91 87654 32109', vehicleType: 'Scooter', vehicleNumber: 'MH-04 CD 7890', rating: 4.6, totalDeliveries: 892 },
+      { name: 'Priya Singh', phone: '+91 76543 21098', vehicleType: 'Bike', vehicleNumber: 'KA-05 EF 1234', rating: 4.9, totalDeliveries: 2103 },
+      { name: 'Vikram Yadav', phone: '+91 65432 10987', vehicleType: 'Van', vehicleNumber: 'UP-32 GH 5678', rating: 4.7, totalDeliveries: 1589 },
+      { name: 'Sneha Patel', phone: '+91 54321 09876', vehicleType: 'Scooter', vehicleNumber: 'GJ-01 IJ 9012', rating: 4.5, totalDeliveries: 673 },
+      { name: 'Arjun Reddy', phone: '+91 93456 78901', vehicleType: 'Bike', vehicleNumber: 'TS-08 KL 3456', rating: 4.8, totalDeliveries: 1834 },
+    ];
+
+    for (const order of orders) {
+      if (order.paymentStatus === 'paid' && (!order.deliveryPartner || !order.deliveryPartner.name)) {
+        const selectedPartner = deliveryPartners[Math.floor(Math.random() * deliveryPartners.length)];
+        const now = new Date();
+        const deliveryDays = 3 + Math.floor(Math.random() * 3);
+        const estimatedDate = new Date(now.getTime() + deliveryDays * 24 * 60 * 60 * 1000);
+        const totalMs = estimatedDate.getTime() - now.getTime();
+
+        order.deliveryPartner = selectedPartner;
+        order.estimatedDeliveryDate = order.estimatedDeliveryDate || estimatedDate;
+        order.trackingNumber = order.trackingNumber || ('TRK' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase());
+        order.currentLocation = order.currentLocation || (order.originHub || 'MediConnect Central Pharmacy');
+
+        if (!order.journeyRoute || order.journeyRoute.length === 0) {
+          const estDate = order.estimatedDeliveryDate;
+          const tMs = estDate.getTime() - now.getTime();
+          order.journeyRoute = [
+            { stopName: order.originHub || 'MediConnect Central Pharmacy', stopType: 'origin', estimatedArrival: now, actualArrival: now, status: 'current', distanceFromPrevKm: 0 },
+            { stopName: 'Regional Sorting Facility', stopType: 'sorting', estimatedArrival: new Date(now.getTime() + tMs * 0.15), status: 'upcoming', distanceFromPrevKm: 45 },
+            { stopName: 'City Distribution Hub', stopType: 'hub', estimatedArrival: new Date(now.getTime() + tMs * 0.4), status: 'upcoming', distanceFromPrevKm: 120 },
+            { stopName: 'Local Delivery Station', stopType: 'local', estimatedArrival: new Date(now.getTime() + tMs * 0.7), status: 'upcoming', distanceFromPrevKm: 25 },
+            { stopName: 'Last Mile — Out for Delivery', stopType: 'last_mile', estimatedArrival: new Date(now.getTime() + tMs * 0.9), status: 'upcoming', distanceFromPrevKm: 8 },
+            { stopName: order.shippingAddress || 'Patient Address', stopType: 'destination', estimatedArrival: estDate, status: 'upcoming', distanceFromPrevKm: 3 },
+          ];
+        }
+
+        if (!order.trackingUpdates || order.trackingUpdates.length === 0) {
+          order.trackingUpdates = [
+            { status: 'processing', activity: 'Order placed & payment verified. Prescription under review.', location: order.originHub || 'MediConnect Central Pharmacy', timestamp: order.createdAt || now },
+            { status: 'processing', activity: `Delivery partner ${selectedPartner.name} assigned. Estimated delivery by ${(order.estimatedDeliveryDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}.`, location: order.originHub || 'MediConnect Central Pharmacy', timestamp: new Date((order.createdAt || now).getTime() + 60000) },
+          ];
+        }
+
+        await order.save();
+      }
+    }
 
     res.json({ success: true, data: orders });
   } catch (error) {
