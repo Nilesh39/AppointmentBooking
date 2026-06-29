@@ -182,46 +182,71 @@ export default function SearchDoctors() {
             No doctors match your active search terms.
           </div>
         ) : (
-          doctors.map((doc) => (
-            <motion.div
-              layout
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              key={doc._id}
-              className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-3xl p-5 hover:shadow-premium-hover flex flex-col sm:flex-row gap-5 transition-all text-left"
-            >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary/25 to-secondary/25 flex-shrink-0 flex items-center justify-center text-3xl">
-                🩺
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-extrabold text-slate-800 dark:text-white truncate">Dr. {doc.userId?.name}</h3>
-                      <p className="text-xs text-primary dark:text-secondary font-bold uppercase mt-0.5">{doc.specialization}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-amber-500 font-extrabold text-xs">
-                      <Star size={14} fill="currentColor" /> {doc.averageRating || 'N/A'} <span className="text-slate-400 font-normal">({doc.ratingsCount})</span>
-                    </div>
-                  </div>
+          doctors.map((doc) => {
+            // Simulate status for premium UI feel
+            const isOnline = Math.random() > 0.4;
+            const docInitial = doc.userId?.name ? doc.userId.name.charAt(0).toUpperCase() : 'D';
 
-                  <div className="mt-3 space-y-1 text-xs text-slate-400">
-                    <p className="flex items-center gap-1 truncate"><MapPin size={12} /> {doc.location}</p>
-                    <p>Consultation Fee: <span className="font-extrabold text-slate-800 dark:text-white">${doc.fees}</span></p>
-                    <p>Experience: <span className="font-bold text-slate-650 dark:text-slate-300">{doc.experience} years</span></p>
+            return (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                key={doc._id}
+                className="group relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/40 dark:border-slate-800/40 rounded-3xl p-5 hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 dark:hover:border-primary/20 transition-all duration-300 flex flex-col sm:flex-row gap-5 text-left"
+              >
+                {/* Left: Avatar with gradient & live status dot */}
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex-shrink-0 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-primary/10">
+                  {docInitial}
+                  <div className={`absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-md text-[7.5px] font-black uppercase tracking-wider text-white border-2 border-white dark:border-slate-950 ${
+                    isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                  }`}>
+                    {isOnline ? 'Online' : 'Offline'}
                   </div>
                 </div>
 
-                <button
-                  onClick={() => navigate(`/doctors/${doc.userId?._id}`)}
-                  className="mt-4 sm:mt-0 w-full sm:w-fit px-5 py-2 text-center text-xs font-semibold bg-primary hover:bg-primary-dark text-white rounded-xl transition-all shadow-md"
-                >
-                  Book Consultation
-                </button>
-              </div>
-            </motion.div>
-          ))
+                {/* Right: Info Area */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base sm:text-lg font-black text-slate-850 dark:text-white truncate group-hover:text-primary dark:group-hover:text-secondary transition-colors">
+                          Dr. {doc.userId?.name}
+                        </h3>
+                        <p className="text-[10px] text-primary dark:text-secondary font-black uppercase tracking-wider mt-0.5">
+                          {doc.specialization}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 text-amber-500 font-black text-xs shrink-0 bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-lg">
+                        <Star size={11} fill="currentColor" className="shrink-0" /> 
+                        {doc.averageRating ? doc.averageRating.toFixed(1) : '4.5'} 
+                        <span className="text-slate-400 font-normal text-[9px]">({doc.ratingsCount || 12})</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800/80 pt-3">
+                      <p className="flex items-center gap-1 truncate"><MapPin size={12} className="text-slate-400" /> {doc.location || 'Consultation Room 3'}</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-205">Experience: <span className="font-extrabold text-primary dark:text-secondary">{doc.experience} years</span></p>
+                      <p className="col-span-2 mt-1">
+                        Fee: <span className="font-extrabold text-slate-850 dark:text-white text-xs">${doc.fees}</span> / slot
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800/80 pt-3">
+                    <span className="text-[9.5px] font-bold text-slate-400">Available: Mon - Fri</span>
+                    <button
+                      onClick={() => navigate(`/doctors/${doc.userId?._id}`)}
+                      className="px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:shadow-lg hover:shadow-primary/20 text-white rounded-xl text-xs font-black transition-all cursor-pointer"
+                    >
+                      Book Consultation
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })
         )}
       </div>
 

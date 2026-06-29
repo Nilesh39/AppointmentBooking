@@ -103,3 +103,10 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Smooth global colors transition for Light/Dark Mode toggle */
+body, nav, header, main, footer, section, button, input, select, textarea, p, h1, h2, h3, h4, h5, h6, span, a, .glass-panel, .glass-card {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 400ms;
+}
+

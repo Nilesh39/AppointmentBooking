@@ -87,7 +87,7 @@ export default function Home() {
             </form>
           </motion.div>
 
-          {/* Hero Illustration */}
+           {/* Hero Illustration - Premium Live Scheduler Preview */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -95,24 +95,74 @@ export default function Home() {
             className="relative flex justify-center"
           >
             <div className="w-80 h-80 sm:w-96 sm:h-96 rounded-full bg-gradient-to-tr from-primary/25 to-secondary/25 absolute -z-10 blur-3xl" />
-            <div className="glass-panel w-full max-w-sm rounded-3xl p-6 shadow-premium border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden flex flex-col justify-between h-80 bg-white/45 dark:bg-slate-900/40">
-              <div className="flex justify-between items-start">
-                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center font-bold">
-                  <span>Rx</span>
+            <div className="glass-panel w-full max-w-sm rounded-3xl p-6 shadow-premium border border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden flex flex-col justify-between h-[360px] bg-white/45 dark:bg-slate-900/40">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-550 dark:text-slate-400">Live Slots Available</span>
                 </div>
-                <div className="px-2.5 py-1 bg-primary/10 text-primary dark:bg-primary/20 dark:text-secondary rounded-full text-xs font-bold">
-                  Online Booking
+                <span className="text-[10px] font-bold text-primary dark:text-secondary bg-primary/10 dark:bg-primary/20 px-2 py-0.5 rounded-full">Rx Portal</span>
+              </div>
+              
+              <div className="space-y-3 my-4 flex-1 flex flex-col justify-center">
+                {/* Simulated Slot Card 1 */}
+                <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-sm flex items-center justify-between hover:scale-[1.03] transition-transform">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-lg font-bold">🩺</div>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-slate-800 dark:text-white">Dr. Sarah Connor</p>
+                      <p className="text-[9px] text-slate-405 font-bold">Cardiology • Online</p>
+                    </div>
+                  </div>
+                  <span className="text-[9.5px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-1 rounded-lg">10:30 AM</span>
+                </div>
+
+                {/* Simulated Slot Card 2 */}
+                <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-sm flex items-center justify-between hover:scale-[1.03] transition-transform">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-secondary flex items-center justify-center text-white text-lg font-bold">🧠</div>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-slate-800 dark:text-white">Dr. Alan Grant</p>
+                      <p className="text-[9px] text-slate-405 font-bold">Neurology • In-Clinic</p>
+                    </div>
+                  </div>
+                  <span className="text-[9.5px] font-extrabold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded-lg">02:15 PM</span>
                 </div>
               </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white">Instant Diagnostics</h3>
-                <p className="text-xs text-slate-400 mt-2">Get immediate digital scripts and clinical reports within minutes of your slot.</p>
+
+              <div className="pt-3 border-t border-slate-105 dark:border-slate-800 flex justify-between items-center">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Diagnostics Status</p>
+                  <p className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200">Instant Reports Active</p>
+                </div>
+                <Link to="/patient/search" className="flex items-center gap-1.5 text-xs font-black text-primary dark:text-secondary group">
+                  Book Slot <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
-              <Link to="/patient/search" className="flex items-center gap-2 text-sm font-bold text-primary dark:text-secondary group">
-                Find doctor <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
             </div>
           </motion.div>
+        </div>
+
+        {/* Live Statistics Counter Grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/50 dark:border-slate-800/50 shadow-premium">
+            <div className="text-center p-3 border-r border-slate-100 dark:border-slate-800 last:border-none">
+              <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">15k+</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-1">Successful Consults</p>
+            </div>
+            <div className="text-center p-3 border-r border-slate-100 dark:border-slate-800 last:border-none">
+              <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">120+</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-1">Expert Specialists</p>
+            </div>
+            <div className="text-center p-3 border-r border-slate-100 dark:border-slate-800 last:border-none">
+              <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">4.9/5</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-1">Patient Satisfaction</p>
+            </div>
+            <div className="text-center p-3 last:border-none">
+              <p className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">99.9%</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-1">Platform Uptime</p>
+            </div>
+          </div>
         </div>
       </section>
 
