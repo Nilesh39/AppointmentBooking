@@ -259,14 +259,14 @@ export default function Navbar() {
             </Link>
 
             <Link
-              to="/chat"
+              to={`/${user.role}/chat`}
               className={`flex flex-col items-center gap-0.5 text-xs font-bold transition-all relative ${
-                isActive('/chat') ? 'text-primary dark:text-secondary scale-110' : 'text-slate-400 hover:text-slate-600'
+                location.pathname.startsWith(`/${user.role}/chat`) ? 'text-primary dark:text-secondary scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <MessageSquare size={18} />
               <span>Chat</span>
-              {isActive('/chat') && <span className="absolute -bottom-1.5 w-1 h-1 bg-primary dark:bg-secondary rounded-full" />}
+              {location.pathname.startsWith(`/${user.role}/chat`) && <span className="absolute -bottom-1.5 w-1 h-1 bg-primary dark:bg-secondary rounded-full" />}
             </Link>
           </>
         ) : (

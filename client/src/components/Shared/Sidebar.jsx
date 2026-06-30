@@ -81,8 +81,8 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile Floating Bottom Pill Navigation Bar */}
-      <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[440px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-full px-2 py-2 flex items-center justify-around gap-1 z-40">
+      {/* Mobile Horizontal Sub-Navigation Tab Strip */}
+      <nav className="md:hidden w-full overflow-x-auto flex gap-2 pb-3 mb-4 border-b border-slate-150 dark:border-slate-850 no-scrollbar">
         {currentLinks.map((link) => {
           const IconComponent = link.icon;
           return (
@@ -90,15 +90,15 @@ export default function Sidebar() {
               key={link.path}
               to={link.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center p-2.5 rounded-full transition-all duration-300 ${
+                `whitespace-nowrap flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 ${
                   isActive
-                    ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/30'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                 }`
               }
-              title={link.label}
             >
-              <IconComponent size={18} />
+              <IconComponent size={14} />
+              <span>{link.label}</span>
             </NavLink>
           );
         })}

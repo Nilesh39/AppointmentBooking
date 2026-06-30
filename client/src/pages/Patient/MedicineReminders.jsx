@@ -94,19 +94,20 @@ export default function MedicineReminders() {
           {/* Days selector */}
           <div className="space-y-2 col-span-full">
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Frequency (Days)</label>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5 justify-start">
               {daysOfWeek.map((day) => (
                 <button
                   key={day}
                   type="button"
                   onClick={() => toggleDay(day)}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                  className={`w-9 h-9 flex items-center justify-center text-[10.5px] font-black rounded-full border transition-all cursor-pointer ${
                     selectedDays.includes(day)
-                      ? 'bg-primary text-white border-transparent'
-                      : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                      ? 'bg-primary text-white border-transparent shadow-md shadow-primary/20 scale-105'
+                      : 'bg-transparent border-slate-200 dark:border-slate-850 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                   }`}
+                  title={day}
                 >
-                  {day.slice(0, 3)}
+                  {day.slice(0, 2)}
                 </button>
               ))}
             </div>
