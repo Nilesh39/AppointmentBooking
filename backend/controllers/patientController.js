@@ -5,7 +5,7 @@ import Review from '../models/Review.js';
 import Appointment from '../models/Appointment.js';
 import MedicineOrder from '../models/MedicineOrder.js';
 import Stripe from 'stripe';
-import { uploadFile } from '../utils/uploader.js';
+import { uploadFile, deleteFile } from '../utils/uploader.js';
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -97,16 +97,20 @@ export const uploadMedicalRecord = async (req, res) => {
   }
 };
 
-// @desc    Delete medical record
-// @route   DELETE /api/patient/records/:recordId
-// @access  Private (Patient only)
 export const deleteMedicalRecord = async (req, res) => {
   try {
-    const profile = await PatientProfile.findOneAndUpdate(
-      { userId: req.user._id },
-      { $pull: { medicalRecords: { _id: req.params.recordId } } },
-      { new: true }
-    );
+    const profile = await PatientProfile.findOne({ userId: req.user._id });
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Patient profile not found' });
+    }
+
+    const record = profile.medicalRecords.find((r) => r._id.toString() === req.params.recordId);
+    if (record) {
+      await deleteFile(record.url);
+    }
+
+    profile.medicalRecords = profile.medicalRecords.filter((r) => r._id.toString() !== req.params.recordId);
+    await profile.save();
 
     res.json({
       success: true,

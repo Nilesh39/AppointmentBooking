@@ -72,8 +72,14 @@ const appointmentSchema = new mongoose.Schema(
   }
 );
 
-// Compound index to prevent double booking the same doctor at the same date and slot
-appointmentSchema.index({ doctorId: 1, date: 1, timeSlot: 1, status: 1 }, { unique: false });
+// Compound unique index to prevent double booking the same doctor at the same date and slot
+appointmentSchema.index(
+  { doctorId: 1, date: 1, timeSlot: 1 },
+  { 
+    unique: true,
+    partialFilterExpression: { status: { $in: ['pending', 'accepted', 'completed'] } }
+  }
+);
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 export default Appointment;

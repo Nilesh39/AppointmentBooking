@@ -10,11 +10,17 @@ import { generateInvoicePDF } from '../utils/pdfGenerator.js';
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
-// Helper to translate weekday numbers to day names
+// Helper to translate weekday numbers to day names in a timezone-safe manner
 const getDayName = (dateStr) => {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dateObj.getDay()];
+  }
   const dateObj = new Date(dateStr);
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dateObj.getUTCDay()];
+  return days[dateObj.getDay()];
 };
 
 // Helper to send socket notifications in real-time
@@ -60,12 +66,12 @@ export const bookAppointment = async (req, res) => {
       return res.status(400).json({ success: false, message: `Doctor does not consult on ${weekday} at ${timeSlot}` });
     }
 
-    // 3. Prevent double booking for same doctor on same date and time
+    // 3. Prevent double booking for same doctor on same date and time (fail-safe check before insert)
     const bookingConflict = await Appointment.findOne({
       doctorId,
       date,
       timeSlot,
-      status: { $ne: 'cancelled' },
+      status: { $in: ['pending', 'accepted', 'completed'] },
     });
 
     if (bookingConflict) {
@@ -90,6 +96,9 @@ export const bookAppointment = async (req, res) => {
       appointment,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'This slot is already booked' });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };

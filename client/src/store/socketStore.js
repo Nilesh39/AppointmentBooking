@@ -19,7 +19,10 @@ export const useSocketStore = create((set, get) => ({
       withCredentials: true,
     });
 
-    socket.emit('join', userId);
+    socket.on('connect', () => {
+      socket.emit('join', userId);
+      console.log('Socket connected/reconnected & joined');
+    });
 
     socket.on('receive_message', (msg) => {
       const active = get().activeContact;

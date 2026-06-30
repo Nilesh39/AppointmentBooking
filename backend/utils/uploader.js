@@ -41,3 +41,35 @@ export const uploadFile = async (file) => {
     throw new Error('Failed to save file locally');
   }
 };
+
+/**
+ * Deletes a file physically from Cloudinary or local storage.
+ * @param {string} fileUrl - The public URL of the uploaded file
+ */
+export const deleteFile = async (fileUrl) => {
+  if (!fileUrl) return;
+
+  if (fileUrl.includes('res.cloudinary.com')) {
+    if (isCloudinaryConfigured) {
+      try {
+        const urlParts = fileUrl.split('/');
+        const folderAndFile = urlParts.slice(-2).join('/'); // e.g. "mediconnect/filename.jpg"
+        const publicId = folderAndFile.split('.')[0]; // e.g. "mediconnect/filename"
+        
+        await cloudinary.uploader.destroy(publicId);
+      } catch (error) {
+        console.error('Failed to delete file from Cloudinary:', error);
+      }
+    }
+  } else if (fileUrl.startsWith('/uploads/')) {
+    try {
+      const filename = fileUrl.replace('/uploads/', '');
+      const filePath = path.join('./public/uploads', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (err) {
+      console.error('Failed to delete local file:', err);
+    }
+  }
+};
