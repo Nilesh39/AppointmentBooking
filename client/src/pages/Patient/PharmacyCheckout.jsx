@@ -32,6 +32,7 @@ export default function PharmacyCheckout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [simulationMode, setSimulationMode] = useState('success'); // 'success' | 'failure'
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -58,7 +59,7 @@ export default function PharmacyCheckout() {
   // Card formatting
   const handleCardNumberChange = (e) => {
     let value = e.target.value.replace(/\D/g, ''); // numbers only
-    value = value.substring(0, 16); // max 16 digits
+    value = value.substring(0, 19); // max 19 digits
     const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 '); // add spaces every 4 digits
     setCardNumber(formatted);
   };
@@ -74,7 +75,7 @@ export default function PharmacyCheckout() {
 
   const handleCvvChange = (e) => {
     let value = e.target.value.replace(/\D/g, '');
-    value = value.substring(0, 3);
+    value = value.substring(0, 4); // max 4 digits
     setCardCvv(value);
   };
 
@@ -96,8 +97,9 @@ export default function PharmacyCheckout() {
     }
 
     if (paymentMethod === 'card') {
-      if (cardNumber.replace(/\s+/g, '').length < 16) {
-        toast.error('Please enter a valid 16-digit card number');
+      const cleanNum = cardNumber.replace(/\s+/g, '');
+      if (cleanNum.length < 12 || cleanNum.length > 19) {
+        toast.error('Please enter a valid card number (12-19 digits)');
         return;
       }
       if (!cardName.trim()) {
@@ -137,8 +139,9 @@ export default function PharmacyCheckout() {
       'Securing transaction tokens with merchant gateway...',
       'Verifying payment credentials with your issuer...',
       'Confirming pharmacy inventory reservation...',
-      'Completing transaction and updating prescription log...',
-      'Payment verified successfully!'
+      ...(simulationMode === 'success' 
+        ? ['Completing transaction and updating prescription log...', 'Payment verified successfully!'] 
+        : ['Transaction declined by issuer bank!'])
     ];
 
     const timer = setInterval(async () => {
@@ -146,6 +149,11 @@ export default function PharmacyCheckout() {
         setProcessingStep(prev => prev + 1);
       } else {
         clearInterval(timer);
+        if (simulationMode === 'failure') {
+          toast.error('Payment Failed: Transaction was declined by the issuer bank.');
+          setIsProcessing(false);
+          return;
+        }
         try {
           // Call verify backend
           const res = await API.post('/patient/orders/verify', {
@@ -170,7 +178,7 @@ export default function PharmacyCheckout() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isProcessing, processingStep, orderId, navigate]);
+  }, [isProcessing, processingStep, orderId, navigate, simulationMode]);
 
   if (loading) {
     return (
@@ -331,6 +339,31 @@ export default function PharmacyCheckout() {
                   >
                     <Building2 size={14} /> Net Banking
                   </button>
+                </div>
+
+                {/* Simulated Outcome Toggle */}
+                <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-205 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-500">Simulate Payment Outcome</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSimulationMode('success')}
+                      className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        simulationMode === 'success' ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20' : 'bg-transparent text-slate-400 hover:text-slate-655'
+                      }`}
+                    >
+                      Success
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimulationMode('failure')}
+                      className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                        simulationMode === 'failure' ? 'bg-red-500 text-white shadow-sm shadow-red-500/20' : 'bg-transparent text-slate-400 hover:text-slate-655'
+                      }`}
+                    >
+                      Decline/Fail
+                    </button>
+                  </div>
                 </div>
 
                 <form onSubmit={handlePaymentSubmit} className="space-y-4">

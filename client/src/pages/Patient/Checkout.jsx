@@ -27,6 +27,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [simulationMode, setSimulationMode] = useState('success'); // 'success' | 'failure'
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
@@ -52,7 +53,7 @@ export default function Checkout() {
   // Card formatting
   const handleCardNumberChange = (e) => {
     let value = e.target.value.replace(/\D/g, ''); // numbers only
-    value = value.substring(0, 16); // max 16 digits
+    value = value.substring(0, 19); // max 19 digits for generic/Maestro/RuPay
     const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 '); // add spaces every 4 digits
     setCardNumber(formatted);
   };
@@ -68,7 +69,7 @@ export default function Checkout() {
 
   const handleCvvChange = (e) => {
     let value = e.target.value.replace(/\D/g, '');
-    value = value.substring(0, 3);
+    value = value.substring(0, 4); // max 4 digits CVV
     setCardCvv(value);
   };
 
@@ -89,8 +90,9 @@ export default function Checkout() {
 
     // Validation
     if (paymentMethod === 'card') {
-      if (cardNumber.replace(/\s+/g, '').length < 16) {
-        toast.error('Please enter a valid 16-digit card number');
+      const cleanNum = cardNumber.replace(/\s+/g, '');
+      if (cleanNum.length < 12 || cleanNum.length > 19) {
+        toast.error('Please enter a valid card number (12-19 digits)');
         return;
       }
       if (!cardName.trim()) {
@@ -129,20 +131,30 @@ export default function Checkout() {
       'Establishing 256-bit SSL encrypted connection...',
       'Securing transaction tokens with merchant gateway...',
       'Verifying payment credentials with your issuer...',
-      'Confirming ledger balance & clearing funds...',
-      'Payment verified successfully!'
+      simulationMode === 'success' 
+        ? 'Confirming ledger balance & clearing funds...' 
+        : 'Issuer reported insufficient funds / invalid card state.',
+      simulationMode === 'success' 
+        ? 'Payment verified successfully!' 
+        : 'Transaction declined!'
     ];
 
     const timer = setInterval(() => {
       setProcessingStep((prev) => {
         if (prev >= steps.length - 1) {
           clearInterval(timer);
-          setPaymentSuccess(true);
           
-          // Redirect to verified payment success page after completion animation
-          setTimeout(() => {
-            navigate(`/payment-success?appointment_id=${appointmentId}&mock=true`);
-          }, 1200);
+          if (simulationMode === 'success') {
+            setPaymentSuccess(true);
+            // Redirect to verified payment success page after completion animation
+            setTimeout(() => {
+              navigate(`/payment-success?appointment_id=${appointmentId}&mock=true`);
+            }, 1200);
+          } else {
+            // Handle simulated payment failure
+            toast.error('Payment Failed: Transaction was declined by the issuer bank.');
+            setIsProcessing(false);
+          }
 
           return prev;
         }
@@ -151,7 +163,7 @@ export default function Checkout() {
     }, 900);
 
     return () => clearInterval(timer);
-  }, [isProcessing, appointmentId, navigate]);
+  }, [isProcessing, appointmentId, navigate, simulationMode]);
 
   if (loading) {
     return (
@@ -232,6 +244,31 @@ export default function Checkout() {
                 <Building2 size={18} />
                 <span>Net Banking</span>
               </button>
+            </div>
+
+            {/* Simulated Outcome Toggle */}
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-205 dark:border-slate-800">
+              <span className="text-xs font-bold text-slate-500">Simulate Payment Outcome</span>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSimulationMode('success')}
+                  className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                    simulationMode === 'success' ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20' : 'bg-transparent text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  Success
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSimulationMode('failure')}
+                  className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                    simulationMode === 'failure' ? 'bg-red-500 text-white shadow-sm shadow-red-500/20' : 'bg-transparent text-slate-400 hover:text-slate-655'
+                  }`}
+                >
+                  Decline/Fail
+                </button>
+              </div>
             </div>
 
             {/* Card Payment Form & Graphic Preview */}
