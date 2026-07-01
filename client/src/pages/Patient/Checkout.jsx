@@ -340,7 +340,6 @@ export default function Checkout() {
                     <input
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9]*"
                       value={cardNumber}
                       onChange={handleCardNumberChange}
                       placeholder="4242 4242 4242 4242"
@@ -367,7 +366,6 @@ export default function Checkout() {
                       <input
                         type="password"
                         inputMode="numeric"
-                        pattern="[0-9]*"
                         value={cardCvv}
                         onChange={handleCvvChange}
                         placeholder="123"
