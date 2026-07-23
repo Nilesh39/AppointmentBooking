@@ -212,7 +212,7 @@ export const toggleFavouriteDoctor = async (req, res) => {
 // @access  Public
 export const getDoctors = async (req, res) => {
   try {
-    const { specialization, location, experience, maxFees, search, page = 1, limit = 10 } = req.query;
+    const { specialization, location, experience, maxFees, search, sortBy, page = 1, limit = 10 } = req.query;
 
     const query = { status: 'approved' };
 
@@ -241,13 +241,24 @@ export const getDoctors = async (req, res) => {
       query.userId = { $in: matchedUserIds };
     }
 
+    let sortObj = { averageRating: -1, experience: -1 };
+    if (sortBy === 'fees_asc') {
+      sortObj = { fees: 1 };
+    } else if (sortBy === 'fees_desc') {
+      sortObj = { fees: -1 };
+    } else if (sortBy === 'experience_desc') {
+      sortObj = { experience: -1 };
+    } else if (sortBy === 'rating_desc') {
+      sortObj = { averageRating: -1 };
+    }
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const doctors = await DoctorProfile.find(query)
       .populate('userId', 'name email role')
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ averageRating: -1, experience: -1 });
+      .sort(sortObj);
 
     const total = await DoctorProfile.countDocuments(query);
 
