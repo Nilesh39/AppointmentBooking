@@ -87,5 +87,10 @@ const doctorProfileSchema = new mongoose.Schema(
   }
 );
 
+// Performance Indexes
+doctorProfileSchema.index({ status: 1, specialization: 1, fees: 1, experience: -1 });
+doctorProfileSchema.index({ userId: 1 }, { unique: true });
+doctorProfileSchema.index({ location: 1 });
+
 const DoctorProfile = mongoose.model('DoctorProfile', doctorProfileSchema);
 export default DoctorProfile;

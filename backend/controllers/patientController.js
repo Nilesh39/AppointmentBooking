@@ -236,7 +236,7 @@ export const getDoctors = async (req, res) => {
     let userFilter = { role: 'doctor' };
     if (search) {
       userFilter.name = { $regex: search, $options: 'i' };
-      const matchedUsers = await User.find(userFilter).select('_id');
+      const matchedUsers = await User.find(userFilter).select('_id').lean();
       const matchedUserIds = matchedUsers.map(u => u._id);
       query.userId = { $in: matchedUserIds };
     }
@@ -258,7 +258,8 @@ export const getDoctors = async (req, res) => {
       .populate('userId', 'name email role')
       .skip(skip)
       .limit(parseInt(limit))
-      .sort(sortObj);
+      .sort(sortObj)
+      .lean();
 
     const total = await DoctorProfile.countDocuments(query);
 
